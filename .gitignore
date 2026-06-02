@@ -373,3 +373,5 @@ vcpkg_installed/
 
 # vendored vcpkg (legacy; CMake uses your own vcpkg via VCPKG_ROOT)
 /vcpkg/
+
+.vscode/
