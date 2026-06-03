@@ -1,0 +1,40 @@
+// Windows resource script (configured by CMake from app.rc.in).
+// Embeds the application icon + version/publisher metadata into the .exe. This is
+// hygiene for shipping: an unsigned binary with proper VERSIONINFO reads as real
+// software to heuristic scanners and SmartScreen (it does NOT replace code signing,
+// which is the actual fix for the "unknown publisher" warning).
+//
+// @VAR@ tokens are substituted by configure_file(... @ONLY) so the version stays a
+// single source of truth (project() VERSION in CMakeLists.txt).
+
+// Explorer/taskbar use the lowest-id icon group as the file icon.
+1 ICON "@FLAPPY_ICON_PATH@"
+
+1 VERSIONINFO
+ FILEVERSION    @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+ PRODUCTVERSION @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+ FILEFLAGSMASK  0x3fL
+ FILEFLAGS      0x0L
+ FILEOS         0x40004L   // VOS_NT_WINDOWS32
+ FILETYPE       0x1L       // VFT_APP
+ FILESUBTYPE    0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"   // U.S. English, Unicode
+        BEGIN
+            VALUE "CompanyName",      "meta_legend"
+            VALUE "FileDescription",  "Flappy Bird"
+            VALUE "FileVersion",      "@PROJECT_VERSION@"
+            VALUE "InternalName",     "Flappy_Bird"
+            VALUE "OriginalFilename", "Flappy Bird.exe"
+            VALUE "ProductName",      "Flappy Bird"
+            VALUE "ProductVersion",   "@PROJECT_VERSION@"
+            VALUE "LegalCopyright",   "Copyright (C) 2026 meta_legend"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
