@@ -15,6 +15,9 @@ endif()
 # raylib comes from vcpkg (see vcpkg.json). The vcpkg toolchain file is passed
 # on the command line, so manifest mode installs it automatically at configure.
 find_package(raylib CONFIG REQUIRED)
+# vcpkg's static raylib references GLFW symbols but doesn't propagate the glfw
+# link dependency through its target, so link glfw explicitly.
+find_package(glfw3 CONFIG REQUIRED)
 
 # networkml v2.0.0 is built from source so the game is portable across
 # Windows / macOS / Linux. The prebuilt .lib in the v2.0.0 release is
@@ -47,7 +50,7 @@ add_library(NetworkML::networkml ALIAS networkml)
 
 # --- Game executable ---------------------------------------------------------
 add_executable(Flappy_Bird Flappy_Bird/main.cpp)
-target_link_libraries(Flappy_Bird PRIVATE raylib NetworkML::networkml)
+target_link_libraries(Flappy_Bird PRIVATE raylib glfw NetworkML::networkml)
 
 # On Windows build a GUI app (no console window) while keeping int main().
 if(WIN32)

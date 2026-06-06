@@ -4,6 +4,7 @@
   "description": "Flappy Bird clone in C++/raylib with an online leaderboard.",
   "dependencies": [
     "raylib",
+    "glfw3",
     "curl",
     "nlohmann-json"
   ]
