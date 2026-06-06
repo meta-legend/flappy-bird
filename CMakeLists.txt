@@ -1,0 +1,67 @@
+cmake_minimum_required(VERSION 3.28)
+
+project(FlappyBird VERSION 1.0.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Default to a Release build when the generator is single-config and the user
+# did not pick one (so a plain `cmake -B build` produces an optimized binary).
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
+# --- Dependencies ------------------------------------------------------------
+# raylib comes from vcpkg (see vcpkg.json). The vcpkg toolchain file is passed
+# on the command line, so manifest mode installs it automatically at configure.
+find_package(raylib CONFIG REQUIRED)
+
+# networkml v2.0.0 is built from source so the game is portable across
+# Windows / macOS / Linux. The prebuilt .lib in the v2.0.0 release is
+# Windows/MSVC-only; building from source lets CI produce native binaries for
+# every platform. networkml itself pulls libcurl + nlohmann-json from vcpkg.
+include(FetchContent)
+FetchContent_Declare(
+    networkml
+    GIT_REPOSITORY https://github.com/meta-legend/network-ml-library.git
+    GIT_TAG        v2.0.0
+    EXCLUDE_FROM_ALL  # don't ship networkml's own headers/lib in our package
+)
+FetchContent_MakeAvailable(networkml)
+
+# --- Game executable ---------------------------------------------------------
+add_executable(Flappy_Bird Flappy_Bird/main.cpp)
+target_link_libraries(Flappy_Bird PRIVATE raylib NetworkML::networkml)
+
+# On Windows build a GUI app (no console window) while keeping int main().
+if(WIN32)
+    set_target_properties(Flappy_Bird PROPERTIES WIN32_EXECUTABLE TRUE)
+    if(MSVC)
+        target_link_options(Flappy_Bird PRIVATE /ENTRY:mainCRTStartup)
+    else()
+        target_link_options(Flappy_Bird PRIVATE -mwindows)
+    endif()
+endif()
+
+# Copy assets next to the binary so the game runs straight from the build tree.
+add_custom_command(TARGET Flappy_Bird POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/Flappy_Bird/assets"
+            "$<TARGET_FILE_DIR:Flappy_Bird>/assets"
+    VERBATIM)
+
+# --- Install + packaging (CPack) --------------------------------------------
+# Layout inside the package: the executable at the root next to an assets/ dir.
+install(TARGETS Flappy_Bird RUNTIME DESTINATION "." BUNDLE DESTINATION ".")
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Flappy_Bird/assets" DESTINATION ".")
+
+set(CPACK_PACKAGE_NAME "FlappyBird")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_FILE_NAME "FlappyBird-${PROJECT_VERSION}-${CMAKE_SYSTEM_NAME}")
+set(CPACK_PACKAGE_DIRECTORY "${CMAKE_BINARY_DIR}/package")
+if(WIN32)
+    set(CPACK_GENERATOR "ZIP")
+else()
+    set(CPACK_GENERATOR "TGZ")
+endif()
+include(CPack)

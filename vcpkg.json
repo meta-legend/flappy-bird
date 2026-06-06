@@ -1,0 +1,10 @@
+{
+  "name": "flappy-bird",
+  "version": "1.0.0",
+  "description": "Flappy Bird clone in C++/raylib with an online leaderboard.",
+  "dependencies": [
+    "raylib",
+    "curl",
+    "nlohmann-json"
+  ]
+}

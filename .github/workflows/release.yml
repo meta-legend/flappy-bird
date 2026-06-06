@@ -1,0 +1,99 @@
+name: Build & Release
+
+# Builds self-contained binaries for Windows, Linux and macOS.
+# - Push a version tag (e.g. v1.0.0) to build AND publish a GitHub Release.
+# - Or run manually (workflow_dispatch) to just build + upload artifacts.
+on:
+  push:
+    branches: ['**']   # build on every branch push (validation)
+    tags: ['v*']       # tags additionally publish a Release (see release job)
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to create the GitHub Release
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            triplet: x64-windows-static   # static CRT + deps -> single portable .exe
+            # Match our target's CRT to vcpkg's static-CRT deps (avoids LNK2038).
+            cmake_args: -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+          - os: ubuntu-latest
+            triplet: x64-linux            # static libs by default on Linux
+            cmake_args: ""
+          - os: macos-latest
+            triplet: arm64-osx            # Apple Silicon runners
+            cmake_args: ""
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-cache
+    steps:
+      - uses: actions/checkout@v4
+
+      # raylib (built from source by vcpkg) needs X11/GL dev headers on Linux.
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-dev libx11-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxi-dev libxext-dev \
+            autoconf automake libtool pkg-config
+
+      - name: Prepare vcpkg binary cache
+        shell: bash
+        run: mkdir -p "${VCPKG_DEFAULT_BINARY_CACHE}"
+
+      - name: Cache vcpkg build artifacts
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-${{ matrix.os }}-${{ matrix.triplet }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ matrix.os }}-${{ matrix.triplet }}-
+
+      # Uses the vcpkg preinstalled on GitHub runners (VCPKG_INSTALLATION_ROOT).
+      - name: Configure
+        shell: bash
+        run: |
+          cmake -B build -S . \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="${VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+            -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
+            ${{ matrix.cmake_args }}
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Package (CPack -> zip/tar.gz)
+        run: cmake --build build --config Release --target package
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FlappyBird-${{ runner.os }}
+          path: build/package/*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true

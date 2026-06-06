@@ -1,4 +1,5 @@
-#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
+// The Windows GUI subsystem (no console window) is configured by CMake, not a
+// compiler pragma, so the build stays portable across Windows/macOS/Linux.
 
 // include for iostream for debuging
 #include <iostream>
@@ -81,7 +82,11 @@ void Debug(string debugName, float debugValue)
 
 int main()
 {
-	// window initiation 
+	// Run from the executable's own folder so the relative ./assets paths resolve
+	// no matter where the game is launched from (double-click, installer, etc.).
+	ChangeDirectory(GetApplicationDirectory());
+
+	// window initiation
 	InitWindow(800, 600, "Flappy Bird");
 	// enables vsync for the window
 	SetWindowState(FLAG_VSYNC_HINT);
