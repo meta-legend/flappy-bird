@@ -150,7 +150,7 @@ int main()
 	Sound die = LoadSound("./assets/sounds/sfx_die.wav");
 	Sound restart = LoadSound("./assets/sounds/sfx_point.wav");
 	Sound start = LoadSound("./assets/sounds/sfx_swooshing.wav");
-	Sound theme = LoadSound("./assets/sounds/theme.wav");
+	Sound theme = LoadSound("./assets/sounds/theme.mp3");
 	
 	// stringstream to convert score to string
 	stringstream ss;
