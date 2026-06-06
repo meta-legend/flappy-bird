@@ -19,15 +19,31 @@ find_package(raylib CONFIG REQUIRED)
 # networkml v2.0.0 is built from source so the game is portable across
 # Windows / macOS / Linux. The prebuilt .lib in the v2.0.0 release is
 # Windows/MSVC-only; building from source lets CI produce native binaries for
-# every platform. networkml itself pulls libcurl + nlohmann-json from vcpkg.
+# every platform. networkml needs libcurl + nlohmann-json (from vcpkg).
+find_package(CURL REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
+
+# Fetch the source only. networkml's own CMakeLists exports a target whose
+# include path isn't $<BUILD_INTERFACE:>-wrapped, which fails CMake generation,
+# so we point SOURCE_SUBDIR at a directory with no CMakeLists.txt to stop
+# FetchContent from add_subdirectory()-ing it, then compile it ourselves.
 include(FetchContent)
 FetchContent_Declare(
     networkml
     GIT_REPOSITORY https://github.com/meta-legend/network-ml-library.git
     GIT_TAG        v2.0.0
-    EXCLUDE_FROM_ALL  # don't ship networkml's own headers/lib in our package
+    SOURCE_SUBDIR  _skip_networkml_cmake   # no CMakeLists here -> not configured
 )
 FetchContent_MakeAvailable(networkml)
+
+add_library(networkml STATIC
+    "${networkml_SOURCE_DIR}/Network ML/File.cpp"
+    "${networkml_SOURCE_DIR}/Network ML/Requests.cpp"
+    "${networkml_SOURCE_DIR}/Network ML/Chat.cpp"
+)
+target_include_directories(networkml PUBLIC "${networkml_SOURCE_DIR}/Network ML")
+target_link_libraries(networkml PUBLIC CURL::libcurl nlohmann_json::nlohmann_json)
+add_library(NetworkML::networkml ALIAS networkml)
 
 # --- Game executable ---------------------------------------------------------
 add_executable(Flappy_Bird Flappy_Bird/main.cpp)
