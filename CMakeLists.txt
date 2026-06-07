@@ -52,6 +52,14 @@ add_library(NetworkML::networkml ALIAS networkml)
 add_executable(Flappy_Bird Flappy_Bird/main.cpp)
 target_link_libraries(Flappy_Bird PRIVATE raylib glfw NetworkML::networkml)
 
+# HMAC secret for signing leaderboard submissions. Pass -DLEADERBOARD_SECRET=...
+# (CI injects it from a GitHub Actions secret). Without it the game uses a dev
+# secret that only matches a local dev server.
+set(LEADERBOARD_SECRET "" CACHE STRING "HMAC secret for leaderboard signing")
+if(LEADERBOARD_SECRET)
+    target_compile_definitions(Flappy_Bird PRIVATE LEADERBOARD_SECRET="${LEADERBOARD_SECRET}")
+endif()
+
 # On Windows build a GUI app (no console window) while keeping int main().
 if(WIN32)
     set_target_properties(Flappy_Bird PROPERTIES WIN32_EXECUTABLE TRUE)
