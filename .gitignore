@@ -366,3 +366,7 @@ FodyWeavers.xsd
 /out/build/
 vcpkg_installed/
 .vcpkg-cache/
+
+# Local manual-test scratch (built locally, not for CI/release)
+/local-test/
+/run-local-test.bat
