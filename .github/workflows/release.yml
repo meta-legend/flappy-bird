@@ -58,6 +58,15 @@ jobs:
           restore-keys: |
             vcpkg-${{ matrix.os }}-${{ matrix.triplet }}-
 
+      # The runners' vcpkg is a shallow clone, so make the manifest's
+      # builtin-baseline commit available before resolving dependencies.
+      - name: Fetch vcpkg baseline commit
+        shell: bash
+        run: |
+          BASELINE=$(grep -oE '"builtin-baseline"[^"]*"[0-9a-f]+"' vcpkg.json | grep -oE '[0-9a-f]{40}')
+          echo "Fetching vcpkg baseline $BASELINE"
+          git -C "$VCPKG_INSTALLATION_ROOT" fetch --depth 1 origin "$BASELINE"
+
       # Uses the vcpkg preinstalled on GitHub runners (VCPKG_INSTALLATION_ROOT).
       - name: Configure
         shell: bash
