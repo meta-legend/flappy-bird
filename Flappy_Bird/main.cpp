@@ -267,6 +267,12 @@ int main()
 		// keep the streaming music buffer fed each frame
 		UpdateMusicStream(theme);
 
+		// Frame-rate-independent movement: per-frame speeds below are tuned to
+		// 144 FPS, so scale them by how long this frame actually took. This
+		// makes the game play at the same real-time speed on any refresh rate.
+		// (Lower/raise the 144.0f to make the whole game slower/faster.)
+		float frameScale = GetFrameTime() * 144.0f;
+
 		if (splashScreen) {
 			if ((splashScreenShakeY == 0 || splashScreenShakeY < 5) && splashScreenUpCycle) {
 				splashScreenShakeY += 5 * GetFrameTime();
@@ -301,7 +307,7 @@ int main()
 		// scoring
 		if (alive)
 		{
-			score += 0.2;
+			score += 0.2 * frameScale;
 		}
 		else if (!splashScreen)
 		{
@@ -513,12 +519,12 @@ int main()
 		// animating pipes 
 		if (alive)
 		{
-			pipe1TOP.x -= speed;
-			pipe1BOTTOM.x -= speed;
-			pipe2TOP.x -= speed;
-			pipe2BOTTOM.x -= speed;
-			pipe3TOP.x -= speed;
-			pipe3BOTTOM.x -= speed;
+			pipe1TOP.x -= speed * frameScale;
+			pipe1BOTTOM.x -= speed * frameScale;
+			pipe2TOP.x -= speed * frameScale;
+			pipe2BOTTOM.x -= speed * frameScale;
+			pipe3TOP.x -= speed * frameScale;
+			pipe3BOTTOM.x -= speed * frameScale;
 		}
 
 		//increasing speed as time passes
