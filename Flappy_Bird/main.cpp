@@ -23,6 +23,11 @@
 // this makes its easier to debug
 using namespace std;
 
+// the game's fixed internal resolution; everything is drawn at this size into a
+// render texture, then scaled to the actual window (for fullscreen support)
+static constexpr int VIRTUAL_W = 800;
+static constexpr int VIRTUAL_H = 600;
+
 // the online leaderboard endpoint (Netlify function backed by Netlify Blobs).
 // Override with the FLAPPY_LEADERBOARD_URL env var to point at a local backend
 // (e.g. http://localhost:8899/api/leaderboard) for testing.
@@ -97,13 +102,13 @@ struct Bird
 {
 	// the default x and y for the flappy bird
 	float x = 200;
-	float y = GetScreenHeight() / 2 - 30;
+	float y = VIRTUAL_H / 2 - 30;
 	
 	// reset the x, y  and speed to the defaults
 	void Reset(float& speed)
 	{
 		x = 200;
-		y = GetScreenHeight() / 2 - 30;
+		y = VIRTUAL_H / 2 - 30;
 		speed = 1;
 	}
 };
@@ -161,9 +166,14 @@ int main()
 
 	// enable vsync (must be set BEFORE InitWindow via config flags; setting it
 	// afterwards left the window not presenting / blank on some drivers)
-	SetConfigFlags(FLAG_VSYNC_HINT);
+	SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
 	// window initiation
-	InitWindow(800, 600, "Flappy Bird");
+	InitWindow(VIRTUAL_W, VIRTUAL_H, "Flappy Bird");
+
+	// render target the whole game is drawn into, then scaled to the window so
+	// fullscreen (and any window size) keeps the fixed 800x600 layout intact
+	RenderTexture2D screen = LoadRenderTexture(VIRTUAL_W, VIRTUAL_H);
+	SetTextureFilter(screen.texture, TEXTURE_FILTER_BILINEAR);
 	// loading and setting the window icon
 	const char* windowIcon = "./assets/images/Flappy_Bird_icon.png";
 	SetWindowIcon(LoadImage(windowIcon));
@@ -273,6 +283,9 @@ int main()
 		// (Lower/raise the 144.0f to make the whole game slower/faster.)
 		float frameScale = GetFrameTime() * 144.0f;
 
+		// F11 toggles borderless fullscreen
+		if (IsKeyPressed(KEY_F11)) ToggleBorderlessWindowed();
+
 		if (splashScreen) {
 			if ((splashScreenShakeY == 0 || splashScreenShakeY < 5) && splashScreenUpCycle) {
 				splashScreenShakeY += 5 * GetFrameTime();
@@ -313,7 +326,7 @@ int main()
 		{
 			// plays death sound
 			playSound++;
-			scorePos = GetScreenHeight() / 2;
+			scorePos = VIRTUAL_H / 2;
 			if (playSound == 1)
 			{
 				PlaySound(die);
@@ -369,7 +382,7 @@ int main()
 		}
 
 		// checking if the bird goes offscreen and if its true reset its position
-		if ((bird.y < 0 || bird.y > GetScreenHeight() + 30) && alive)
+		if ((bird.y < 0 || bird.y > VIRTUAL_H + 30) && alive)
 		{
 			bird.Reset(speed);
 		}
@@ -471,18 +484,18 @@ int main()
 		// set high score
 		highScore = "High Score: " + fileManager.readFile("score.txt");
 
-		// begin drawing the bird and all of the pipes
-		BeginDrawing();
+		// draw the whole game into the fixed-size render texture
+		BeginTextureMode(screen);
 		ClearBackground(GREEN);
 		if (splashScreen) {
 			DrawTexture(splashScreenTexture, 25, 150 + splashScreenShakeY, WHITE);
 
 				// name entry prompt for the online leaderboard
-				DrawText("Enter your name:", GetScreenWidth() / 2 - MeasureText("Enter your name:", 25) / 2, 400, 25, DARKBLUE);
+				DrawText("Enter your name:", VIRTUAL_W / 2 - MeasureText("Enter your name:", 25) / 2, 400, 25, DARKBLUE);
 				// blinking caret while typing
 				string nameDisplay = playerName + (((int)(GetTime() * 2) % 2) ? "_" : " ");
-				DrawText(nameDisplay.c_str(), GetScreenWidth() / 2 - MeasureText(nameDisplay.c_str(), 40) / 2, 430, 40, RAYWHITE);
-				DrawText("Press ENTER to start", GetScreenWidth() / 2 - MeasureText("Press ENTER to start", 30) / 2, 490, 30, RED);
+				DrawText(nameDisplay.c_str(), VIRTUAL_W / 2 - MeasureText(nameDisplay.c_str(), 40) / 2, 430, 40, RAYWHITE);
+				DrawText("Press ENTER to start", VIRTUAL_W / 2 - MeasureText("Press ENTER to start", 30) / 2, 490, 30, RED);
 		}
 		else {
 			DrawTexture(pipeTexture180, pipe1TOP.x, pipe1TOP.y, WHITE);
@@ -494,22 +507,35 @@ int main()
 			DrawTexture(birdTexture, bird.x, bird.y, WHITE);
 			if (!alive)
 			{
-				DrawText("Press Space To Start!", GetScreenWidth() / 2 - MeasureText("Press Space To Start!", 35) / 2, 50, 35, RED);
+				DrawText("Press Space To Start!", VIRTUAL_W / 2 - MeasureText("Press Space To Start!", 35) / 2, 50, 35, RED);
 			}
 
 			if (alive)
 			{
-				DrawText(stringScore.c_str(), GetScreenWidth() / 2 - scoreWidth / 2, 30, 60, DARKBLUE);
+				DrawText(stringScore.c_str(), VIRTUAL_W / 2 - scoreWidth / 2, 30, 60, DARKBLUE);
 			}
 			else
 			{
-				DrawText(stringScore.c_str(), GetScreenWidth() / 2 - scoreWidth / 2, scorePos, 60, DARKBLUE);
+				DrawText(stringScore.c_str(), VIRTUAL_W / 2 - scoreWidth / 2, scorePos, 60, DARKBLUE);
 			}
 
-			DrawText("Made By: meta_legend!", GetScreenWidth() / 2 - MeasureText("Credit: Pranab Shukla!", 50) / 2, 525, 50, DARKBLUE);
+			DrawText("Made By: meta_legend!", VIRTUAL_W / 2 - MeasureText("Credit: Pranab Shukla!", 50) / 2, 525, 50, DARKBLUE);
 
 			DrawText(highScore.c_str(), 620, 15, 20, DARKBLUE);
 		}
+		EndTextureMode();
+
+		// present the render texture scaled to the window (letterboxed, centered)
+		float scale = fminf((float)GetScreenWidth() / VIRTUAL_W, (float)GetScreenHeight() / VIRTUAL_H);
+		Rectangle srcRec = { 0.0f, 0.0f, (float)VIRTUAL_W, -(float)VIRTUAL_H }; // negative height flips Y
+		Rectangle dstRec = {
+			(GetScreenWidth() - VIRTUAL_W * scale) * 0.5f,
+			(GetScreenHeight() - VIRTUAL_H * scale) * 0.5f,
+			VIRTUAL_W * scale, VIRTUAL_H * scale
+		};
+		BeginDrawing();
+		ClearBackground(BLACK);
+		DrawTexturePro(screen.texture, srcRec, dstRec, { 0.0f, 0.0f }, 0.0f, WHITE);
 		EndDrawing();
 
 		// reset score
@@ -545,6 +571,7 @@ int main()
 	UnloadSound(restart);
 	UnloadSound(start);
 	UnloadMusicStream(theme);
+	UnloadRenderTexture(screen);
 
 	// close audio device
 	CloseAudioDevice();
