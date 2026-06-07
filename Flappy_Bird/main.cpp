@@ -37,6 +37,10 @@ using namespace std;
 static constexpr int VIRTUAL_W = 800;
 static constexpr int VIRTUAL_H = 600;
 
+// bird physics: gravity pulls down constantly, each tap sets an upward velocity
+static constexpr float GRAVITY = 1500.0f;       // px per second^2 (downward)
+static constexpr float JUMP_IMPULSE = -450.0f;  // px per second (upward burst on tap)
+
 // the online leaderboard endpoint (netlify function backed by netlify blobs)
 // override with the FLAPPY_LEADERBOARD_URL env var to point at a local backend
 // (e.g. http://localhost:8899/api/leaderboard) for testing
@@ -149,12 +153,15 @@ struct Bird
 	// the default x and y for the flappy bird
 	float x = 200;
 	float y = VIRTUAL_H / 2 - 30;
-	
-	// reset the x, y  and speed to the defaults
+	// vertical velocity for the hop/gravity physics
+	float velocity = 0;
+
+	// reset the x, y, velocity and speed to the defaults
 	void Reset(float& speed)
 	{
 		x = 200;
 		y = VIRTUAL_H / 2 - 30;
+		velocity = 0;
 		speed = 1;
 	}
 };
@@ -321,6 +328,8 @@ int main()
 
 	// play theme song, music loops automatically
 	PlayMusicStream(theme);
+	// keep the theme quieter than the sfx
+	SetMusicVolume(theme, 0.3f);
 
 	// game loop
 	while (!WindowShouldClose())
@@ -418,18 +427,14 @@ int main()
 			}
 		}
 		// flappy bird behavior
-		if ((IsKeyDown(KEY_SPACE) || IsKeyDown(KEY_UP) || IsKeyDown(KEY_W) || IsMouseButtonDown(MOUSE_BUTTON_LEFT)) && alive)
+		// each tap gives an upward hop, gravity does the rest (works alive or not
+		// so the bird keeps falling on the death screen)
+		if (alive && (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)))
 		{
-			bird.y -= 240 * GetFrameTime();
+			bird.velocity = JUMP_IMPULSE;
 		}
-		else if (alive)
-		{
-			bird.y += 200 * GetFrameTime();
-		}
-		else
-		{
-			bird.y += 400 * GetFrameTime();
-		}
+		bird.velocity += GRAVITY * GetFrameTime();
+		bird.y += bird.velocity * GetFrameTime();
 
 		// checking if the bird goes offscreen and if its true reset its position
 		if ((bird.y < 0 || bird.y > VIRTUAL_H + 30) && alive)
@@ -557,7 +562,14 @@ int main()
 			DrawTexture(pipeTexture, pipe2BOTTOM.x, pipe2BOTTOM.y, WHITE);
 			DrawTexture(pipeTexture180, pipe3TOP.x, pipe3TOP.y + topPipeOff, WHITE);
 			DrawTexture(pipeTexture, pipe3BOTTOM.x, pipe3BOTTOM.y, WHITE);
-			DrawTexture(birdTexture, bird.x, bird.y, WHITE);
+			// tilt the bird with its velocity: nose up on a hop, rotating down as it falls
+			float birdAngle = bird.velocity * 0.08f;
+			if (birdAngle < -25.0f) birdAngle = -25.0f;
+			if (birdAngle > 90.0f) birdAngle = 90.0f;
+			Rectangle birdSrc = { 0, 0, (float)birdTexture.width, (float)birdTexture.height };
+			Rectangle birdDst = { bird.x + birdTexture.width / 2.0f, bird.y + birdTexture.height / 2.0f, (float)birdTexture.width, (float)birdTexture.height };
+			Vector2 birdOrigin = { birdTexture.width / 2.0f, birdTexture.height / 2.0f };
+			DrawTexturePro(birdTexture, birdSrc, birdDst, birdOrigin, birdAngle, WHITE);
 			if (!alive)
 			{
 				DrawText("Press Space To Start!", VIRTUAL_W / 2 - MeasureText("Press Space To Start!", 35) / 2, 50, 35, RED);
