@@ -11,13 +11,56 @@
 #include <sstream>
 // include fstream for high score
 #include <fstream>
+// include thread so leaderboard submissions never block the game loop
+#include <thread>
 // include raylib because that's the library that I'm using
 #include "raylib.h"
-// include networkml because im using networkml for file management
+// include networkml for file management and the online leaderboard requests
 #include "networkml.h"
 
-// this makes its easier to debug 
+// this makes its easier to debug
 using namespace std;
+
+// the online leaderboard endpoint (Netlify function backed by Netlify Blobs)
+static const string LEADERBOARD_URL = "https://pranabshukla.netlify.app/api/leaderboard";
+
+// minimal JSON string escaping for the player name
+static string JsonEscape(const string& s)
+{
+	string out;
+	for (char c : s)
+	{
+		switch (c)
+		{
+		case '"':  out += "\\\""; break;
+		case '\\': out += "\\\\"; break;
+		case '\n': out += "\\n";  break;
+		case '\r': out += "\\r";  break;
+		case '\t': out += "\\t";  break;
+		default:
+			if ((unsigned char)c < 0x20) continue; // drop other control chars
+			out += c;
+		}
+	}
+	return out;
+}
+
+// POST a score to the leaderboard on a detached thread so a slow or offline
+// network never freezes the game. Failures are silently ignored (offline-safe).
+static void SubmitScore(const string& name, int score)
+{
+	string player = name.empty() ? string("Anonymous") : name;
+	std::thread([player, score]() {
+		try
+		{
+			ML::Requests req;
+			string body = "{\"name\":\"" + JsonEscape(player) +
+				"\",\"score\":" + std::to_string(score) + "}";
+			req.post(LEADERBOARD_URL, body, { "Content-Type: application/json" }, 5);
+		}
+		catch (...) {}
+	}).detach();
+}
 
 // the flappy bird obj
 struct Bird
@@ -164,11 +207,20 @@ int main()
 		fileManager.createFile("score.txt", "0");
 	}
 
-	// string saved score 
+	// string saved score
 	string savedScore = "";
 
-	// highScore 
+	// highScore
 	string highScore = "";
+
+	// player name for the online leaderboard, remembered between runs
+	string playerName = fileManager.readFile("player.txt");
+	// ML::File::readFile appends a trailing newline; strip trailing whitespace
+	while (!playerName.empty() && (playerName.back() == '\n' || playerName.back() == '\r' || playerName.back() == ' '))
+		playerName.pop_back();
+
+	// ensures each death submits the score to the leaderboard only once
+	bool scoreSubmitted = false;
 
 	// play theme song
 	PlaySound(theme);
@@ -194,7 +246,19 @@ int main()
 					}
 				}
 			}
-			if (IsKeyDown(KEY_SPACE)) {
+			// let the player type their leaderboard name on the splash screen
+			int ch = GetCharPressed();
+			while (ch > 0) {
+				if (playerName.size() < 15 && ch >= 32 && ch < 127)
+					playerName += (char)ch;
+				ch = GetCharPressed();
+			}
+			if (IsKeyPressed(KEY_BACKSPACE) && !playerName.empty())
+				playerName.pop_back();
+
+			// ENTER starts the game (SPACE is reserved for flapping/typing)
+			if (IsKeyPressed(KEY_ENTER)) {
+				fileManager.createFile("player.txt", playerName);
 				splashScreen = false;
 				alive = true;
 			}
@@ -221,10 +285,19 @@ int main()
 				fileManager.deleteFile("score.txt");
 				fileManager.createFile("score.txt", savedScore);
 			}
-			
+
+			// submit this run's score to the online leaderboard (once per death)
+			if (!scoreSubmitted && !savedScore.empty())
+			{
+				try { SubmitScore(playerName, stoi(savedScore)); }
+				catch (...) {}
+				scoreSubmitted = true;
+			}
+
 			// reset the game if space clicked
 			if (IsKeyDown(KEY_SPACE))
 			{
+				scoreSubmitted = false;
 				score = 0;
 				bird.Reset(speed);
 				pipe1TOP.Reset(true, true);
@@ -363,6 +436,13 @@ int main()
 		ClearBackground(GREEN);
 		if (splashScreen) {
 			DrawTexture(splashScreenTexture, 25, 150 + splashScreenShakeY, WHITE);
+
+				// name entry prompt for the online leaderboard
+				DrawText("Enter your name:", GetScreenWidth() / 2 - MeasureText("Enter your name:", 25) / 2, 400, 25, DARKBLUE);
+				// blinking caret while typing
+				string nameDisplay = playerName + (((int)(GetTime() * 2) % 2) ? "_" : " ");
+				DrawText(nameDisplay.c_str(), GetScreenWidth() / 2 - MeasureText(nameDisplay.c_str(), 40) / 2, 430, 40, RAYWHITE);
+				DrawText("Press ENTER to start", GetScreenWidth() / 2 - MeasureText("Press ENTER to start", 30) / 2, 490, 30, RED);
 		}
 		else {
 			DrawTexture(pipeTexture180, pipe1TOP.x, pipe1TOP.y, WHITE);
