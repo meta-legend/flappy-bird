@@ -7,9 +7,16 @@ automatically.
 ## Prerequisites
 - CMake 3.28+
 - A C++17 compiler (MSVC, GCC, or Clang)
-- [vcpkg](https://github.com/microsoft/vcpkg) with the `VCPKG_ROOT` environment
-  variable pointing at it. On Windows you can reuse the copy bundled with Visual
-  Studio, e.g. `C:\Program Files\Microsoft Visual Studio\18\Community\VC\vcpkg`.
+- A full **git clone** of [vcpkg](https://github.com/microsoft/vcpkg) (the
+  manifest's `builtin-baseline` needs vcpkg's git history — the stripped vcpkg
+  bundled with Visual Studio will *not* work). Bootstrap it and point
+  `VCPKG_ROOT` at it:
+  ```bat
+  git clone https://github.com/microsoft/vcpkg C:\vcpkg
+  C:\vcpkg\bootstrap-vcpkg.bat
+  setx VCPKG_ROOT C:\vcpkg
+  ```
+  Reopen your shell / Visual Studio afterwards so `VCPKG_ROOT` is picked up.
 
 ## Visual Studio (recommended on Windows)
 1. Set `VCPKG_ROOT` (once): `setx VCPKG_ROOT "C:\path\to\vcpkg"`, then reopen VS.
