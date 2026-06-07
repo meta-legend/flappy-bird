@@ -58,18 +58,13 @@ jobs:
           restore-keys: |
             vcpkg-${{ matrix.os }}-${{ matrix.triplet }}-
 
-      # Set up a vcpkg checked out exactly at the manifest's builtin-baseline,
-      # so the version database matches the baseline on every platform (the
-      # runners' preinstalled vcpkg is pinned to a different commit).
-      - name: Set up vcpkg at manifest baseline
+      # Full vcpkg clone (not shallow): version overrides resolve port versions
+      # by git-tree, which requires the full history. This mirrors a developer's
+      # local vcpkg clone, so the manifest resolves identically everywhere.
+      - name: Set up vcpkg
         shell: bash
         run: |
-          BASELINE=$(grep -oE '[0-9a-f]{40}' vcpkg.json | head -1)
-          echo "Using vcpkg baseline $BASELINE"
-          git init --quiet vcpkg-ci
-          git -C vcpkg-ci remote add origin https://github.com/microsoft/vcpkg.git
-          git -C vcpkg-ci fetch --quiet --depth 1 origin "$BASELINE"
-          git -C vcpkg-ci checkout --quiet FETCH_HEAD
+          git clone --quiet https://github.com/microsoft/vcpkg.git vcpkg-ci
           if [ "$RUNNER_OS" = "Windows" ]; then
             ./vcpkg-ci/bootstrap-vcpkg.bat -disableMetrics
           else
