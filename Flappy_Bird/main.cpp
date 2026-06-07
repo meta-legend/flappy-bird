@@ -13,6 +13,8 @@
 #include <fstream>
 // include thread so leaderboard submissions never block the game loop
 #include <thread>
+// include cstdlib for std::getenv (configurable leaderboard endpoint)
+#include <cstdlib>
 // include raylib because that's the library that I'm using
 #include "raylib.h"
 // include networkml for file management and the online leaderboard requests
@@ -21,8 +23,15 @@
 // this makes its easier to debug
 using namespace std;
 
-// the online leaderboard endpoint (Netlify function backed by Netlify Blobs)
-static const string LEADERBOARD_URL = "https://pranabshukla.netlify.app/api/leaderboard";
+// the online leaderboard endpoint (Netlify function backed by Netlify Blobs).
+// Override with the FLAPPY_LEADERBOARD_URL env var to point at a local backend
+// (e.g. http://localhost:8899/api/leaderboard) for testing.
+static string LeaderboardUrl()
+{
+	const char* env = std::getenv("FLAPPY_LEADERBOARD_URL");
+	if (env && *env) return string(env);
+	return "https://pranabshukla.netlify.app/api/leaderboard";
+}
 
 // minimal JSON string escaping for the player name
 static string JsonEscape(const string& s)
@@ -56,7 +65,7 @@ static void SubmitScore(const string& name, int score)
 			ML::Requests req;
 			string body = "{\"name\":\"" + JsonEscape(player) +
 				"\",\"score\":" + std::to_string(score) + "}";
-			req.post(LEADERBOARD_URL, body, { "Content-Type: application/json" }, 5);
+			req.post(LeaderboardUrl(), body, { "Content-Type: application/json" }, 5);
 		}
 		catch (...) {}
 	}).detach();
