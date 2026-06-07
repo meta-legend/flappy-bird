@@ -26,10 +26,31 @@ using namespace std;
 // the online leaderboard endpoint (Netlify function backed by Netlify Blobs).
 // Override with the FLAPPY_LEADERBOARD_URL env var to point at a local backend
 // (e.g. http://localhost:8899/api/leaderboard) for testing.
+// portable environment-variable read. MSVC deprecates std::getenv (C4996, and
+// its /sdl check makes that an error), so use _dupenv_s there and plain getenv
+// everywhere else.
+static string GetEnvVar(const char* name)
+{
+#ifdef _MSC_VER
+	char* buf = nullptr;
+	size_t sz = 0;
+	if (_dupenv_s(&buf, &sz, name) == 0 && buf)
+	{
+		string value(buf);
+		free(buf);
+		return value;
+	}
+	return "";
+#else
+	const char* env = std::getenv(name);
+	return env ? string(env) : string("");
+#endif
+}
+
 static string LeaderboardUrl()
 {
-	const char* env = std::getenv("FLAPPY_LEADERBOARD_URL");
-	if (env && *env) return string(env);
+	string env = GetEnvVar("FLAPPY_LEADERBOARD_URL");
+	if (!env.empty()) return env;
 	return "https://pranabshukla.netlify.app/api/leaderboard";
 }
 
