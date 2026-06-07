@@ -55,6 +55,9 @@ target_link_libraries(Flappy_Bird PRIVATE raylib glfw NetworkML::networkml)
 # On Windows build a GUI app (no console window) while keeping int main().
 if(WIN32)
     set_target_properties(Flappy_Bird PROPERTIES WIN32_EXECUTABLE TRUE)
+    # raylib 5.5 needs winmm (timeBeginPeriod/timeEndPeriod); its vcpkg config
+    # doesn't propagate it, so link it explicitly.
+    target_link_libraries(Flappy_Bird PRIVATE winmm)
     if(MSVC)
         target_link_options(Flappy_Bird PRIVATE /ENTRY:mainCRTStartup)
     else()
