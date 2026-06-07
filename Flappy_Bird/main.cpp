@@ -211,7 +211,9 @@ int main()
 	// instantiate my file manager
 	ML::File fileManager = ML::File();
 
-	if (fileManager.readFile("score.txt") == "")
+	// networkml v2.0.0's readFile errors on a missing file, so check exists()
+	// first and seed the high-score file when it isn't there yet.
+	if (!fileManager.exists("score.txt"))
 	{
 		fileManager.createFile("score.txt", "0");
 	}
@@ -223,7 +225,7 @@ int main()
 	string highScore = "";
 
 	// player name for the online leaderboard, remembered between runs
-	string playerName = fileManager.readFile("player.txt");
+	string playerName = fileManager.exists("player.txt") ? fileManager.readFile("player.txt") : string("");
 	// ML::File::readFile appends a trailing newline; strip trailing whitespace
 	while (!playerName.empty() && (playerName.back() == '\n' || playerName.back() == '\r' || playerName.back() == ' '))
 		playerName.pop_back();
