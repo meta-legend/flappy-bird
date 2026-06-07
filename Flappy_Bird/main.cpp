@@ -14,13 +14,23 @@
 #include <thread>
 // include cstdlib for std::getenv (configurable leaderboard endpoint)
 #include <cstdlib>
-// include raylib because that's the library that I'm using
+// include raylib (graphics, input, audio, etc.) 
 #include "raylib.h"
 // include networkml for file management and the online leaderboard requests
 #include "networkml.h"
+// include random for the per request nonce
+#include <random>
+// include our tiny hmac-sha256 for signing leaderboard submissions
+#include "hmac_sha256.h"
 
 // this makes its easier to debug
 using namespace std;
+
+// shared secret used to sign leaderboard submissions, injected at build time by
+// cmake (-DLEADERBOARD_SECRET=...), falls back to a dev value for local testing
+#ifndef LEADERBOARD_SECRET
+#define LEADERBOARD_SECRET "dev-secret-change-me"
+#endif
 
 // the game's fixed internal resolution; everything is drawn at this size into a
 // render texture, then scaled to the actual window (for fullscreen support)
@@ -47,6 +57,26 @@ static string GetEnvVar(const char* name)
 #else
 	const char* env = std::getenv(name);
 	return env ? string(env) : string("");
+#endif
+}
+
+// per-user folder for save data (high score, player name) instead of next to
+// the exe (which may be read-only)
+//   windows: %LOCALAPPDATA%\FlappyBird
+//   macos:   ~/Library/Application Support/FlappyBird
+//   linux:   $XDG_DATA_HOME or ~/.local/share/FlappyBird
+static string SaveDir()
+{
+#ifdef _WIN32
+	string base = GetEnvVar("LOCALAPPDATA");
+	if (base.empty()) base = ".";
+	return base + "\\FlappyBird";
+#elif defined(__APPLE__)
+	return GetEnvVar("HOME") + "/Library/Application Support/FlappyBird";
+#else
+	string base = GetEnvVar("XDG_DATA_HOME");
+	if (base.empty()) base = GetEnvVar("HOME") + "/.local/share";
+	return base + "/FlappyBird";
 #endif
 }
 
@@ -86,10 +116,28 @@ static void SubmitScore(const string& name, int score)
 	std::thread([player, score]() {
 		try
 		{
+			string ts = std::to_string((long long)time(nullptr));
+			string scoreStr = std::to_string(score);
+
+			// random hex nonce so each request is unique (replay protection)
+			string nonce;
+			std::random_device rd;
+			static const char* hexd = "0123456789abcdef";
+			for (int i = 0; i < 24; ++i) nonce += hexd[rd() & 0xf];
+
+			// sign name + score + nonce + timestamp, server recomputes and checks
+			string canonical = player + "\n" + scoreStr + "\n" + nonce + "\n" + ts;
+			string sig = hmacsha256::hmacHex(LEADERBOARD_SECRET, canonical);
+
 			ML::Requests req;
 			string body = "{\"name\":\"" + JsonEscape(player) +
-				"\",\"score\":" + std::to_string(score) + "}";
-			req.post(LeaderboardUrl(), body, { "Content-Type: application/json" }, 5);
+				"\",\"score\":" + scoreStr + "}";
+			req.post(LeaderboardUrl(), body, {
+				"Content-Type: application/json",
+				"X-Timestamp: " + ts,
+				"X-Nonce: " + nonce,
+				"X-Signature: " + sig
+			}, 5);
 		}
 		catch (...) {}
 	}).detach();
@@ -243,11 +291,17 @@ int main()
 	// instantiate my file manager
 	ML::File fileManager = ML::File();
 
+	// keep save data in a per-user folder, not next to the exe
+	string saveDir = SaveDir();
+	fileManager.createFolders(saveDir);
+	string scorePath = saveDir + "/score.txt";
+	string playerPath = saveDir + "/player.txt";
+
 	// networkml v2.0.0 readfile errors on a missing file so check exists() first
 	// and seed the high score file if its not there
-	if (!fileManager.exists("score.txt"))
+	if (!fileManager.exists(scorePath))
 	{
-		fileManager.createFile("score.txt", "0");
+		fileManager.createFile(scorePath, "0");
 	}
 
 	// string saved score
@@ -257,7 +311,7 @@ int main()
 	string highScore = "";
 
 	// player name for the online leaderboard, remembered between runs
-	string playerName = fileManager.exists("player.txt") ? fileManager.readFile("player.txt") : string("");
+	string playerName = fileManager.exists(playerPath) ? fileManager.readFile(playerPath) : string("");
 	// readfile appends a trailing newline so strip trailing whitespace
 	while (!playerName.empty() && (playerName.back() == '\n' || playerName.back() == '\r' || playerName.back() == ' '))
 		playerName.pop_back();
@@ -307,7 +361,7 @@ int main()
 
 			// enter starts the game, space is reserved for flapping/typing
 			if (IsKeyPressed(KEY_ENTER)) {
-				fileManager.createFile("player.txt", playerName);
+				fileManager.createFile(playerPath, playerName);
 				splashScreen = false;
 				alive = true;
 			}
@@ -329,10 +383,10 @@ int main()
 				playSound++;
 			}
 
-			if (stoi(savedScore) > stoi(fileManager.readFile("score.txt")))
+			if (stoi(savedScore) > stoi(fileManager.readFile(scorePath)))
 			{
-				fileManager.deleteFile("score.txt");
-				fileManager.createFile("score.txt", savedScore);
+				fileManager.deleteFile(scorePath);
+				fileManager.createFile(scorePath, savedScore);
 			}
 
 			// submit this run's score to the online leaderboard (once per death)
@@ -443,11 +497,11 @@ int main()
 		birdRect = Rectangle{ bird.x, bird.y, 60, 61 };
 
 		// updating pipe rect collision boxes
-		pipe1TOPRect = Rectangle{ pipe1TOP.x, pipe1TOP.y, 88, 266 };
+		pipe1TOPRect = Rectangle{ pipe1TOP.x, pipe1TOP.y + 266 - pipeTexture180.height, 88, (float)pipeTexture180.height };
 		pipe1BOTTOMRect = Rectangle{ pipe1BOTTOM.x, pipe1BOTTOM.y, 88, 266 };
-		pipe2TOPRect = Rectangle{ pipe2TOP.x, pipe2TOP.y, 88, 266 };
+		pipe2TOPRect = Rectangle{ pipe2TOP.x, pipe2TOP.y + 266 - pipeTexture180.height, 88, (float)pipeTexture180.height };
 		pipe2BOTTOMRect = Rectangle{ pipe2BOTTOM.x, pipe2BOTTOM.y, 88, 266 };
-		pipe3TOPRect = Rectangle{ pipe3TOP.x, pipe3TOP.y, 88, 266 };
+		pipe3TOPRect = Rectangle{ pipe3TOP.x, pipe3TOP.y + 266 - pipeTexture180.height, 88, (float)pipeTexture180.height };
 		pipe3BOTTOMRect = Rectangle{ pipe3BOTTOM.x, pipe3BOTTOM.y, 88, 266 };
 
 		// checking collisions
@@ -478,7 +532,7 @@ int main()
 		}
 
 		// set high score
-		highScore = "High Score: " + fileManager.readFile("score.txt");
+		highScore = "High Score: " + fileManager.readFile(scorePath);
 
 		// draw the whole game into the fixed-size render texture
 		BeginTextureMode(screen);
@@ -494,11 +548,14 @@ int main()
 				DrawText("Press ENTER to start", VIRTUAL_W / 2 - MeasureText("Press ENTER to start", 30) / 2, 490, 30, RED);
 		}
 		else {
-			DrawTexture(pipeTexture180, pipe1TOP.x, pipe1TOP.y, WHITE);
+			// top pipes are drawn from the top left, so anchor their bottom edge at
+			// y+266 (the original opening) and let extra image height extend up offscreen
+			int topPipeOff = 266 - pipeTexture180.height;
+			DrawTexture(pipeTexture180, pipe1TOP.x, pipe1TOP.y + topPipeOff, WHITE);
 			DrawTexture(pipeTexture, pipe1BOTTOM.x, pipe1BOTTOM.y, WHITE);
-			DrawTexture(pipeTexture180, pipe2TOP.x, pipe2TOP.y, WHITE);
+			DrawTexture(pipeTexture180, pipe2TOP.x, pipe2TOP.y + topPipeOff, WHITE);
 			DrawTexture(pipeTexture, pipe2BOTTOM.x, pipe2BOTTOM.y, WHITE);
-			DrawTexture(pipeTexture180, pipe3TOP.x, pipe3TOP.y, WHITE);
+			DrawTexture(pipeTexture180, pipe3TOP.x, pipe3TOP.y + topPipeOff, WHITE);
 			DrawTexture(pipeTexture, pipe3BOTTOM.x, pipe3BOTTOM.y, WHITE);
 			DrawTexture(birdTexture, bird.x, bird.y, WHITE);
 			if (!alive)

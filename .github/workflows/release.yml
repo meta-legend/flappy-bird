@@ -79,6 +79,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
+            -DLEADERBOARD_SECRET="${{ secrets.LEADERBOARD_SECRET }}" \
             ${{ matrix.cmake_args }}
 
       - name: Build
