@@ -164,8 +164,6 @@ int main()
 	SetConfigFlags(FLAG_VSYNC_HINT);
 	// window initiation
 	InitWindow(800, 600, "Flappy Bird");
-	// cap the frame rate as a fallback if vsync isn't honored
-	SetTargetFPS(60);
 	// loading and setting the window icon
 	const char* windowIcon = "./assets/images/Flappy_Bird_icon.png";
 	SetWindowIcon(LoadImage(windowIcon));
