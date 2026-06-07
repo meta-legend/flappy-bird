@@ -1,5 +1,4 @@
-// The Windows GUI subsystem (no console window) is configured by CMake, not a
-// compiler pragma, so the build stays portable across Windows/macOS/Linux.
+// gui subsystem (no console) is set by cmake not a pragma so the build is portable
 
 // include for iostream for debuging
 #include <iostream>
@@ -28,12 +27,11 @@ using namespace std;
 static constexpr int VIRTUAL_W = 800;
 static constexpr int VIRTUAL_H = 600;
 
-// the online leaderboard endpoint (Netlify function backed by Netlify Blobs).
-// Override with the FLAPPY_LEADERBOARD_URL env var to point at a local backend
-// (e.g. http://localhost:8899/api/leaderboard) for testing.
-// portable environment-variable read. MSVC deprecates std::getenv (C4996, and
-// its /sdl check makes that an error), so use _dupenv_s there and plain getenv
-// everywhere else.
+// the online leaderboard endpoint (netlify function backed by netlify blobs)
+// override with the FLAPPY_LEADERBOARD_URL env var to point at a local backend
+// (e.g. http://localhost:8899/api/leaderboard) for testing
+// portable env var read, msvc deprecates std::getenv (C4996, and /sdl makes it
+// an error) so use _dupenv_s there and plain getenv everywhere else
 static string GetEnvVar(const char* name)
 {
 #ifdef _MSC_VER
@@ -59,7 +57,7 @@ static string LeaderboardUrl()
 	return "https://personalwebsiteclonetest.netlify.app/api/leaderboard";
 }
 
-// minimal JSON string escaping for the player name
+// minimal json string escaping for the player name
 static string JsonEscape(const string& s)
 {
 	string out;
@@ -80,8 +78,8 @@ static string JsonEscape(const string& s)
 	return out;
 }
 
-// POST a score to the leaderboard on a detached thread so a slow or offline
-// network never freezes the game. Failures are silently ignored (offline-safe).
+// post a score on a detached thread so a slow or offline network never freezes
+// the game, failures are silently ignored
 static void SubmitScore(const string& name, int score)
 {
 	string player = name.empty() ? string("Anonymous") : name;
@@ -160,18 +158,18 @@ void Debug(string debugName, float debugValue)
 
 int main()
 {
-	// Run from the executable's own folder so the relative ./assets paths resolve
-	// no matter where the game is launched from (double-click, installer, etc.).
+	// run from the exe's own folder so the ./assets paths resolve no matter where
+	// the game is launched from
 	ChangeDirectory(GetApplicationDirectory());
 
-	// enable vsync (must be set BEFORE InitWindow via config flags; setting it
-	// afterwards left the window not presenting / blank on some drivers)
+	// enable vsync before initwindow via config flags, setting it after left the
+	// window blank on some drivers
 	SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
 	// window initiation
 	InitWindow(VIRTUAL_W, VIRTUAL_H, "Flappy Bird");
 
-	// render target the whole game is drawn into, then scaled to the window so
-	// fullscreen (and any window size) keeps the fixed 800x600 layout intact
+	// render target the whole game draws into, then scaled to the window so
+	// fullscreen and any window size keeps the fixed 800x600 layout
 	RenderTexture2D screen = LoadRenderTexture(VIRTUAL_W, VIRTUAL_H);
 	SetTextureFilter(screen.texture, TEXTURE_FILTER_BILINEAR);
 	// loading and setting the window icon
@@ -234,9 +232,8 @@ int main()
 	Sound die = LoadSound("./assets/sounds/sfx_die.wav");
 	Sound restart = LoadSound("./assets/sounds/sfx_point.wav");
 	Sound start = LoadSound("./assets/sounds/sfx_swooshing.wav");
-	// Stream the long background track instead of LoadSound: LoadSound decodes
-	// the whole file into RAM as PCM (~125MB for this song), while a Music
-	// stream decodes on the fly using a tiny buffer.
+	// stream the long track instead of loadsound, loadsound decodes the whole
+	// file into ram (~125mb here) while a music stream decodes on the fly
 	Music theme = LoadMusicStream("./assets/sounds/theme.mp3");
 	
 	// stringstream to convert score to string
@@ -246,8 +243,8 @@ int main()
 	// instantiate my file manager
 	ML::File fileManager = ML::File();
 
-	// networkml v2.0.0's readFile errors on a missing file, so check exists()
-	// first and seed the high-score file when it isn't there yet.
+	// networkml v2.0.0 readfile errors on a missing file so check exists() first
+	// and seed the high score file if its not there
 	if (!fileManager.exists("score.txt"))
 	{
 		fileManager.createFile("score.txt", "0");
@@ -261,14 +258,14 @@ int main()
 
 	// player name for the online leaderboard, remembered between runs
 	string playerName = fileManager.exists("player.txt") ? fileManager.readFile("player.txt") : string("");
-	// ML::File::readFile appends a trailing newline; strip trailing whitespace
+	// readfile appends a trailing newline so strip trailing whitespace
 	while (!playerName.empty() && (playerName.back() == '\n' || playerName.back() == '\r' || playerName.back() == ' '))
 		playerName.pop_back();
 
-	// ensures each death submits the score to the leaderboard only once
+	// makes each death submit the score only once
 	bool scoreSubmitted = false;
 
-	// play theme song (Music loops automatically)
+	// play theme song, music loops automatically
 	PlayMusicStream(theme);
 
 	// game loop
@@ -277,13 +274,12 @@ int main()
 		// keep the streaming music buffer fed each frame
 		UpdateMusicStream(theme);
 
-		// Frame-rate-independent movement: per-frame speeds below are tuned to
-		// 144 FPS, so scale them by how long this frame actually took. This
-		// makes the game play at the same real-time speed on any refresh rate.
-		// (Lower/raise the 144.0f to make the whole game slower/faster.)
+		// frame rate independent movement, per frame speeds below are tuned to
+		// 144 fps so scale them by how long this frame took, same speed on any
+		// refresh rate (change the 144.0f to make the game slower or faster)
 		float frameScale = GetFrameTime() * 144.0f;
 
-		// F11 toggles borderless fullscreen
+		// f11 toggles borderless fullscreen
 		if (IsKeyPressed(KEY_F11)) ToggleBorderlessWindowed();
 
 		if (splashScreen) {
@@ -309,7 +305,7 @@ int main()
 			if (IsKeyPressed(KEY_BACKSPACE) && !playerName.empty())
 				playerName.pop_back();
 
-			// ENTER starts the game (SPACE is reserved for flapping/typing)
+			// enter starts the game, space is reserved for flapping/typing
 			if (IsKeyPressed(KEY_ENTER)) {
 				fileManager.createFile("player.txt", playerName);
 				splashScreen = false;
@@ -529,7 +525,7 @@ int main()
 		float scaleW = (float)GetScreenWidth() / VIRTUAL_W;
 		float scaleH = (float)GetScreenHeight() / VIRTUAL_H;
 		float scale = scaleW < scaleH ? scaleW : scaleH;
-		Rectangle srcRec = { 0.0f, 0.0f, (float)VIRTUAL_W, -(float)VIRTUAL_H }; // negative height flips Y
+		Rectangle srcRec = { 0.0f, 0.0f, (float)VIRTUAL_W, -(float)VIRTUAL_H }; // negative height flips y
 		Rectangle dstRec = {
 			(GetScreenWidth() - VIRTUAL_W * scale) * 0.5f,
 			(GetScreenHeight() - VIRTUAL_H * scale) * 0.5f,

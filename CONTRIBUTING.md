@@ -1,14 +1,14 @@
 # Contributing / Building from source
 
-The build uses **CMake** + **vcpkg** (manifest mode). Dependencies — raylib,
-glfw3, curl, nlohmann-json, and networkml (fetched from source) — are resolved
+The build uses **CMake** + **vcpkg** (manifest mode). Dependencies - raylib,
+glfw3, curl, nlohmann-json, and networkml (fetched from source) - are resolved
 automatically.
 
 ## Prerequisites
 - CMake 3.28+
 - A C++17 compiler (MSVC, GCC, or Clang)
 - A full **git clone** of [vcpkg](https://github.com/microsoft/vcpkg) (the
-  manifest's `builtin-baseline` needs vcpkg's git history — the stripped vcpkg
+  manifest's `builtin-baseline` needs vcpkg's git history - the stripped vcpkg
   bundled with Visual Studio will *not* work). Bootstrap it and point
   `VCPKG_ROOT` at it:
   ```bat
