@@ -226,7 +226,10 @@ int main()
 	Sound die = LoadSound("./assets/sounds/sfx_die.wav");
 	Sound restart = LoadSound("./assets/sounds/sfx_point.wav");
 	Sound start = LoadSound("./assets/sounds/sfx_swooshing.wav");
-	Sound theme = LoadSound("./assets/sounds/theme.mp3");
+	// Stream the long background track instead of LoadSound: LoadSound decodes
+	// the whole file into RAM as PCM (~125MB for this song), while a Music
+	// stream decodes on the fly using a tiny buffer.
+	Music theme = LoadMusicStream("./assets/sounds/theme.mp3");
 	
 	// stringstream to convert score to string
 	stringstream ss;
@@ -257,16 +260,14 @@ int main()
 	// ensures each death submits the score to the leaderboard only once
 	bool scoreSubmitted = false;
 
-	// play theme song
-	PlaySound(theme);
+	// play theme song (Music loops automatically)
+	PlayMusicStream(theme);
 
 	// game loop
 	while (!WindowShouldClose())
 	{
-		// consistencely play the theme
-		if (!IsSoundPlaying(theme)) {
-			PlaySound(theme);
-		}
+		// keep the streaming music buffer fed each frame
+		UpdateMusicStream(theme);
 
 		if (splashScreen) {
 			if ((splashScreenShakeY == 0 || splashScreenShakeY < 5) && splashScreenUpCycle) {
@@ -539,6 +540,7 @@ int main()
 	UnloadSound(die);
 	UnloadSound(restart);
 	UnloadSound(start);
+	UnloadMusicStream(theme);
 
 	// close audio device
 	CloseAudioDevice();
