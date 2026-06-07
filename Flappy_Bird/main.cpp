@@ -239,18 +239,19 @@ int main()
 	// bird collision box
 	Rectangle birdRect = Rectangle{bird.x, bird.y, 60, 61};
 
-	// pipes and their collision boxes initiation
-	Pipe pipe1TOP = Pipe(100, -30);
+	// pipes and their collision boxes initiation. start them well to the right of
+	// the bird (x=200) so there is a runway before the first pipe, spaced 250 apart
+	Pipe pipe1TOP = Pipe(500, -30);
 	Rectangle pipe1TOPRect = Rectangle{ pipe1TOP.x, pipe1TOP.y, 88, 266 };
-	Pipe pipe1BOTTOM = Pipe(100, 380);
+	Pipe pipe1BOTTOM = Pipe(500, 380);
 	Rectangle pipe1BOTTOMRect = Rectangle{ pipe1BOTTOM.x, pipe1BOTTOM.y, 88, 266 };
-	Pipe pipe2TOP = Pipe(350, -10);
+	Pipe pipe2TOP = Pipe(750, -10);
 	Rectangle pipe2TOPRect = Rectangle{ pipe2TOP.x, pipe2TOP.y, 88, 266 };
-	Pipe pipe2BOTTOM = Pipe(350, 400);
+	Pipe pipe2BOTTOM = Pipe(750, 400);
 	Rectangle pipe2BOTTOMRect = Rectangle{ pipe2BOTTOM.x, pipe2BOTTOM.y, 88, 266 };
-	Pipe pipe3TOP = Pipe(600, -50);
+	Pipe pipe3TOP = Pipe(1000, -50);
 	Rectangle pipe3TOPRect = Rectangle{ pipe3TOP.x, pipe3TOP.y, 88, 266 };
-	Pipe pipe3BOTTOM = Pipe(600, 360);
+	Pipe pipe3BOTTOM = Pipe(1000, 360);
 	Rectangle pipe3BOTTOMRect = Rectangle{ pipe3BOTTOM.x, pipe3BOTTOM.y, 88, 266 };
 
 	/*other variables*/
