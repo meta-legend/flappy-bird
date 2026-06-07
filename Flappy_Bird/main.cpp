@@ -51,7 +51,7 @@ static string LeaderboardUrl()
 {
 	string env = GetEnvVar("FLAPPY_LEADERBOARD_URL");
 	if (!env.empty()) return env;
-	return "https://pranabshukla.netlify.app/api/leaderboard";
+	return "https://personalwebsiteclonetest.netlify.app/api/leaderboard";
 }
 
 // minimal JSON string escaping for the player name

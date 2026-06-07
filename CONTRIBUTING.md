@@ -50,7 +50,7 @@ git tag v1.0.0 && git push origin v1.0.0
 
 ## Online leaderboard
 
-The game submits scores to `https://pranabshukla.netlify.app/api/leaderboard`.
+The game submits scores to `https://personalwebsiteclonetest.netlify.app/api/leaderboard`.
 Override the endpoint for local testing with the `FLAPPY_LEADERBOARD_URL`
 environment variable. The leaderboard backend (Netlify Function + Netlify Blobs)
 and page live in the
