@@ -526,7 +526,9 @@ int main()
 		EndTextureMode();
 
 		// present the render texture scaled to the window (letterboxed, centered)
-		float scale = fminf((float)GetScreenWidth() / VIRTUAL_W, (float)GetScreenHeight() / VIRTUAL_H);
+		float scaleW = (float)GetScreenWidth() / VIRTUAL_W;
+		float scaleH = (float)GetScreenHeight() / VIRTUAL_H;
+		float scale = scaleW < scaleH ? scaleW : scaleH;
 		Rectangle srcRec = { 0.0f, 0.0f, (float)VIRTUAL_W, -(float)VIRTUAL_H }; // negative height flips Y
 		Rectangle dstRec = {
 			(GetScreenWidth() - VIRTUAL_W * scale) * 0.5f,
