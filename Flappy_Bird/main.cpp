@@ -159,10 +159,13 @@ int main()
 	// no matter where the game is launched from (double-click, installer, etc.).
 	ChangeDirectory(GetApplicationDirectory());
 
+	// enable vsync (must be set BEFORE InitWindow via config flags; setting it
+	// afterwards left the window not presenting / blank on some drivers)
+	SetConfigFlags(FLAG_VSYNC_HINT);
 	// window initiation
 	InitWindow(800, 600, "Flappy Bird");
-	// enables vsync for the window
-	SetWindowState(FLAG_VSYNC_HINT);
+	// cap the frame rate as a fallback if vsync isn't honored
+	SetTargetFPS(60);
 	// loading and setting the window icon
 	const char* windowIcon = "./assets/images/Flappy_Bird_icon.png";
 	SetWindowIcon(LoadImage(windowIcon));
