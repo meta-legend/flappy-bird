@@ -58,22 +58,31 @@ jobs:
           restore-keys: |
             vcpkg-${{ matrix.os }}-${{ matrix.triplet }}-
 
-      # The runners' vcpkg is a shallow clone, so make the manifest's
-      # builtin-baseline commit available before resolving dependencies.
-      - name: Fetch vcpkg baseline commit
+      # Set up a vcpkg checked out exactly at the manifest's builtin-baseline,
+      # so the version database matches the baseline on every platform (the
+      # runners' preinstalled vcpkg is pinned to a different commit).
+      - name: Set up vcpkg at manifest baseline
         shell: bash
         run: |
-          BASELINE=$(grep -oE '"builtin-baseline"[^"]*"[0-9a-f]+"' vcpkg.json | grep -oE '[0-9a-f]{40}')
-          echo "Fetching vcpkg baseline $BASELINE"
-          git -C "$VCPKG_INSTALLATION_ROOT" fetch --depth 1 origin "$BASELINE"
+          BASELINE=$(grep -oE '[0-9a-f]{40}' vcpkg.json | head -1)
+          echo "Using vcpkg baseline $BASELINE"
+          git init --quiet vcpkg-ci
+          git -C vcpkg-ci remote add origin https://github.com/microsoft/vcpkg.git
+          git -C vcpkg-ci fetch --quiet --depth 1 origin "$BASELINE"
+          git -C vcpkg-ci checkout --quiet FETCH_HEAD
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            ./vcpkg-ci/bootstrap-vcpkg.bat -disableMetrics
+          else
+            ./vcpkg-ci/bootstrap-vcpkg.sh -disableMetrics
+          fi
+          echo "VCPKG_ROOT=$(pwd)/vcpkg-ci" >> "$GITHUB_ENV"
 
-      # Uses the vcpkg preinstalled on GitHub runners (VCPKG_INSTALLATION_ROOT).
       - name: Configure
         shell: bash
         run: |
           cmake -B build -S . \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE="${VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+            -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
             ${{ matrix.cmake_args }}
 
