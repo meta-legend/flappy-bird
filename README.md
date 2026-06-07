@@ -23,7 +23,7 @@ leaderboard automatically.
 ## Leaderboard
 
 See where you rank against everyone else:
-**[pranabshukla.netlify.app/leaderboard.html](https://pranabshukla.netlify.app/leaderboard.html)**
+**[personalwebsiteclonetest.netlify.app/leaderboard.html](https://personalwebsiteclonetest.netlify.app/leaderboard.html)**
 
 ## Credits
 
