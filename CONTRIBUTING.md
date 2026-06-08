@@ -55,9 +55,3 @@ Override the endpoint for local testing with the `FLAPPY_LEADERBOARD_URL`
 environment variable. The leaderboard backend (Netlify Function + Netlify Blobs)
 and page live in the
 [personal-website](https://github.com/meta-legend/personal-website) repo.
-
-## Legacy Visual Studio project
-
-The `Flappy_Bird.sln` / `.vcxproj` and the vendored `vcpkg/` folder are kept for
-reference but are **superseded by the CMake build**, which is what CI uses. Prefer
-the CMake workflow above.
