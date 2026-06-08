@@ -50,7 +50,7 @@ add_library(NetworkML::networkml ALIAS networkml)
 
 # --- Game executable ---------------------------------------------------------
 add_executable(Flappy_Bird Flappy_Bird/main.cpp)
-target_link_libraries(Flappy_Bird PRIVATE raylib glfw NetworkML::networkml)
+target_link_libraries(Flappy_Bird PRIVATE raylib glfw NetworkML::networkml nlohmann_json::nlohmann_json)
 
 # HMAC secret for signing leaderboard submissions. Pass -DLEADERBOARD_SECRET=...
 # (CI injects it from a GitHub Actions secret). Without it the game uses a dev
@@ -65,7 +65,7 @@ if(WIN32)
     set_target_properties(Flappy_Bird PROPERTIES WIN32_EXECUTABLE TRUE)
     # raylib 5.5 needs winmm (timeBeginPeriod/timeEndPeriod); its vcpkg config
     # doesn't propagate it, so link it explicitly.
-    target_link_libraries(Flappy_Bird PRIVATE winmm)
+    target_link_libraries(Flappy_Bird PRIVATE winmm shell32)
     if(MSVC)
         target_link_options(Flappy_Bird PRIVATE /ENTRY:mainCRTStartup)
     else()
