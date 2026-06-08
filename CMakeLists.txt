@@ -49,7 +49,10 @@ target_link_libraries(networkml PUBLIC CURL::libcurl nlohmann_json::nlohmann_jso
 add_library(NetworkML::networkml ALIAS networkml)
 
 # --- Game executable ---------------------------------------------------------
-add_executable(Flappy_Bird Flappy_Bird/main.cpp)
+add_executable(Flappy_Bird
+    Flappy_Bird/main.cpp
+    Flappy_Bird/ui.cpp
+    Flappy_Bird/net.cpp)
 target_link_libraries(Flappy_Bird PRIVATE raylib glfw NetworkML::networkml nlohmann_json::nlohmann_json)
 
 # HMAC secret for signing leaderboard submissions. Pass -DLEADERBOARD_SECRET=...
