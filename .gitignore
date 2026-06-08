@@ -370,3 +370,6 @@ vcpkg_installed/
 # Local manual-test scratch (built locally, not for CI/release)
 /local-test/
 /run-local-test.bat
+
+# vendored vcpkg (legacy; CMake uses your own vcpkg via VCPKG_ROOT)
+/vcpkg/
