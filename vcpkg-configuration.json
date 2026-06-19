@@ -1,0 +1,14 @@
+{
+  "default-registry": {
+    "kind": "builtin",
+    "baseline": "10ceb139a610ebf3c6aa49cdc4a4b7f3db5d3f2b"
+  },
+  "registries": [
+    {
+      "kind": "git",
+      "repository": "https://github.com/meta-legend/vcpkg-registry",
+      "baseline": "62c3636fd40501ecb92bf94569f81e5d26b7f5af",
+      "packages": [ "network-ml" ]
+    }
+  ]
+}
