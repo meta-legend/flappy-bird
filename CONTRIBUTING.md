@@ -1,14 +1,14 @@
 # Contributing / Building from source
 
-The build uses **CMake** + **vcpkg** (manifest mode). Dependencies - raylib,
-glfw3, curl, nlohmann-json, and networkml (fetched from source) - are resolved
+The build uses CMake + vcpkg (manifest mode). Dependencies: raylib,
+glfw3, curl, nlohmann-json, and networkml. They are resolved
 automatically.
 
 ## Prerequisites
 - CMake 3.28+
 - A C++17 compiler (MSVC, GCC, or Clang)
-- A full **git clone** of [vcpkg](https://github.com/microsoft/vcpkg) (the
-  manifest's `builtin-baseline` needs vcpkg's git history - the stripped vcpkg
+- A full git clone of [vcpkg](https://github.com/microsoft/vcpkg) (the
+  manifest's `builtin-baseline` needs vcpkg's git history; the stripped vcpkg
   bundled with Visual Studio will *not* work). Bootstrap it and point
   `VCPKG_ROOT` at it:
   ```bat
@@ -20,8 +20,8 @@ automatically.
 
 ## Visual Studio (recommended on Windows)
 1. Set `VCPKG_ROOT` (once): `setx VCPKG_ROOT "C:\path\to\vcpkg"`, then reopen VS.
-2. **File → Open → Folder…** and select this repo's root.
-3. Pick the **Windows x64 Debug** (or Release) configuration from the toolbar
+2. File → Open → Folder… and select this repo's root.
+3. Pick the Windows x64 Debug (or Release) configuration from the toolbar
    and build/run. VS reads `CMakePresets.json` automatically.
 
 ## Command line
@@ -42,16 +42,14 @@ minutes; subsequent builds are cached.
 ## Releases / CI
 
 `.github/workflows/release.yml` builds self-contained binaries for Windows,
-Linux and macOS on every push, and **publishes a GitHub Release when a `v*` tag
-is pushed**:
+Linux and macOS on every push, and publishes a GitHub Release when a `v*` tag
+is pushed:
 ```sh
 git tag v1.0.0 && git push origin v1.0.0
 ```
 
 ## Online leaderboard
 
-The game submits scores to `https://personalwebsiteclonetest.netlify.app/api/leaderboard`.
+The game submits scores to `https://mxtalegend.netlify.app/api/leaderboard`.
 Override the endpoint for local testing with the `FLAPPY_LEADERBOARD_URL`
-environment variable. The leaderboard backend (Netlify Function + Netlify Blobs)
-and page live in the
-[personal-website](https://github.com/meta-legend/personal-website) repo.
+environment variable. [personal-website](https://github.com/meta-legend/personal-website) repo.
