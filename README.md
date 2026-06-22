@@ -1,10 +1,20 @@
+<div align="center">
+
+<img src="docs/bird.gif" alt="Flappy Bird" width="136" height="96">
+
 # Flappy Bird
+
+[![Version](https://img.shields.io/github/v/release/meta-legend/Flappy_Bird?label=version&sort=semver)](https://github.com/meta-legend/Flappy_Bird/releases/latest)
+[![Build & Release](https://github.com/meta-legend/Flappy_Bird/actions/workflows/release.yml/badge.svg?branch=master)](https://github.com/meta-legend/Flappy_Bird/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
+
+</div>
 
 A Flappy Bird clone built in C++ with [raylib](https://www.raylib.com/) - now
 with a global online leaderboard. Tap to fly, dodge the pipes, and chase the
 top spot.
 
-## Download 
+## Download
 
 Grab the build for your OS from the
 [**Releases**](https://github.com/meta-legend/Flappy_Bird/releases) page, unzip
@@ -22,7 +32,7 @@ leaderboard automatically.
 
 ## Credits
 
-Theme music by [HeatleyBros](https://www.youtube.com/channel/UCsLlqLIE-TqDq3lh5kU2PeA). 
+Theme music by [HeatleyBros](https://www.youtube.com/channel/UCsLlqLIE-TqDq3lh5kU2PeA).
 
 ---
 
