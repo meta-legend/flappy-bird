@@ -28,6 +28,10 @@
 #undef LoadImage
 #undef ShowCursor
 #undef CloseWindow
+// font.h's DrawText / MeasureText macros got nuked by the line above; re-establish them so the toast still
+// routes through gPixelFont (the raylib originals are still reachable via DrawTextEx / MeasureTextEx)
+#define DrawText DrawTextPx
+#define MeasureText MeasureTextPx
 #endif
 
 namespace

@@ -11,17 +11,25 @@ void UnloadGameFont();
 constexpr float PX_SCALE = 0.6f;
 constexpr float PX_SPACING = 1.0f;
 
-// deliberately shadows raylib's DrawText so every call in the codebase routes through gPixelFont.
+// our pixel-font versions of DrawText / MeasureText. named with a Px suffix so they don't redeclare raylib's
+// same-signature globals (which trips Clang/GCC's "static decl follows non-static" rule even though MSVC tolerates it),
+// then a preprocessor remap below transparently routes call sites that write DrawText / MeasureText through these.
 // y is the line top; the (size - fs) * 0.5 term vertically centers the smaller glyph in that line height
-static inline void DrawText(const char* t, int x, int y, int size, Color c)
+inline void DrawTextPx(const char* t, int x, int y, int size, Color c)
 {
 	float fs = size * PX_SCALE;
 	DrawTextEx(gPixelFont, t, Vector2{ (float)x, y + (size - fs) * 0.5f }, fs, PX_SPACING, c);
 }
 
-// shadows raylib's MeasureText with the same PX_SCALE/PX_SPACING as DrawText, so layout math stays consistent
-static inline int MeasureText(const char* t, int size)
+inline int MeasureTextPx(const char* t, int size)
 {
 	float fs = size * PX_SCALE;
 	return (int)MeasureTextEx(gPixelFont, t, fs, PX_SPACING).x;
 }
+
+// route every DrawText / MeasureText call in this codebase to the gPixelFont versions; raylib's originals are still
+// callable through DrawTextEx / MeasureTextEx if anything ever needs them
+#undef DrawText
+#define DrawText DrawTextPx
+#undef MeasureText
+#define MeasureText MeasureTextPx
