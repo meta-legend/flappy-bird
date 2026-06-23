@@ -137,7 +137,9 @@ bool LoadSave(SaveData& sd, const std::string& path)
 
 	size_t p = 4;   // skip the magic; cursor walks the body as the readers consume fields
 	auto rI = [&](int32_t& v) { memcpy(&v, buf.data() + p, 4); p += 4; };
-	auto rL = [&](uint64_t& v) { memcpy(&v, buf.data() + p, 8); p += 8; };
+	// param type must match SaveData's `unsigned long long` fields verbatim: on Linux x86_64, uint64_t is unsigned long
+	// (LP64), which is a distinct type from unsigned long long even though both are 64 bits, and GCC refuses the bind
+	auto rL = [&](unsigned long long& v) { memcpy(&v, buf.data() + p, 8); p += 8; };
 	auto rD = [&](double& v) { memcpy(&v, buf.data() + p, 8); p += 8; };
 	auto rB = [&](bool& v) { int32_t t; rI(t); v = (t != 0); };
 	auto rS = [&](std::string& v) { uint16_t n; memcpy(&n, buf.data() + p, 2); p += 2; v.assign(buf.data() + p, n); p += n; };
