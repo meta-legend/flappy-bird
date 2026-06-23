@@ -1,6 +1,8 @@
 #include "particles.h"
 #include "gameplay_helpers.h"
 
+#include <cmath>
+
 ParticleEmitter::ParticleEmitter(std::vector<Particle>& particleList,
 	const bool& reduceMotionSetting, const SkinIndex& selectedSkin)
 	: particles(particleList), reduceMotion(reduceMotionSetting), skinIndex(selectedSkin)
