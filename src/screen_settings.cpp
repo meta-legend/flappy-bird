@@ -45,7 +45,7 @@ void FlappyGame::DrawSettingsScreen(Vector2 virtualMouse){
 	const float kViewTop = 70.0f;
 	const float kViewBot = 510.0f;
 	const float kViewH = kViewBot - kViewTop;
-	const float kContentH = 1080.0f;
+	const float kContentH = 1450.0f;
 	float maxScroll = (kContentH > kViewH) ? (kContentH - kViewH) : 0.0f;
 	interfaceState.settings.scroll -= GetMouseWheelMove() * 30.0f;
 	if (interfaceState.settings.rebindTarget == RebindTarget::NONE)   // don't scroll while capturing a key (arrows would be eaten)
@@ -68,21 +68,31 @@ void FlappyGame::DrawSettingsScreen(Vector2 virtualMouse){
 
 	BeginScaledScissor(0, (int)kViewTop, VIRTUAL_W, (int)kViewH);   // clip the rows to the scroll viewport
 
-	DrawText("Profile", 90, (int)(80 + ofs), 22, DARKBLUE);
-	DrawText("Name:", 110, (int)(114 + ofs), 18, RAYWHITE);
+	// font-size constants for this screen: headings biggest, row labels middle, hint/detail smallest
+	constexpr int kHeadingFs = 32;   // section headings (Profile, Audio, ...)
+	constexpr int kLabelFs   = 24;   // row labels (Name:, Music:, VSync:, ...)
+	constexpr int kHintFs    = 16;   // detail / hint text under or beside rows
+
+	// shared x coords: headings + row labels all align at kLabelX. right-side hints sit further inboard at kHintX
+	// so they don't crowd the scrollbar (trackX=765 in content coords)
+	constexpr int kLabelX = 90;
+	constexpr int kHintX  = 460;
+
+	DrawText("Profile", kLabelX, (int)(80 + ofs), kHeadingFs, DARKBLUE);
+	DrawText("Name:", kLabelX, (int)(135 + ofs), kLabelFs, RAYWHITE);
 	{
 		std::string nameDisp = storage.save.playerName.empty() ? std::string("(not set)") : storage.save.playerName;
-		DrawText(nameDisp.c_str(), 220, (int)(114 + ofs), 18, SKYBLUE);
-		if (UiButton(Rectangle{ 500, 108 + ofs, 130, 28 }, "Change", virtualMouse))
+		DrawText(nameDisp.c_str(), 210, (int)(135 + ofs), kLabelFs, SKYBLUE);
+		if (UiButton(Rectangle{ 500, 127 + ofs, 140, 36 }, "Change", virtualMouse))
 		{
 			interfaceState.mainMenu.editingName = true;   // name entry lives on the main menu, so bounce there to edit
 			GoToState(GameState::MENU);
 		}
 	}
 
-	DrawText("Audio", 90, (int)(166 + ofs), 22, DARKBLUE);
-	DrawText("Music:", 110, (int)(200 + ofs), 18, RAYWHITE);
-	if (UiSlider(Rectangle{ 220, 204 + ofs, 220, 12 }, interfaceState.musicVolume, virtualMouse))
+	DrawText("Audio", kLabelX, (int)(210 + ofs), kHeadingFs, DARKBLUE);
+	DrawText("Music:", kLabelX, (int)(265 + ofs), kLabelFs, RAYWHITE);
+	if (UiSlider(Rectangle{ 270, 273 + ofs, 220, 12 }, interfaceState.musicVolume, virtualMouse))
 	{
 		// dragging sets a new chosen level and unmutes
 		storage.save.muted = false;
@@ -90,15 +100,15 @@ void FlappyGame::DrawSettingsScreen(Vector2 virtualMouse){
 		ApplyVolumes();
 		interfaceState.settingsDirty = true;
 	}
-	DrawText("SFX:", 110, (int)(228 + ofs), 18, RAYWHITE);
-	if (UiSlider(Rectangle{ 220, 232 + ofs, 220, 12 }, interfaceState.sfxVolume, virtualMouse))
+	DrawText("SFX:", kLabelX, (int)(310 + ofs), kLabelFs, RAYWHITE);
+	if (UiSlider(Rectangle{ 270, 318 + ofs, 220, 12 }, interfaceState.sfxVolume, virtualMouse))
 	{
 		storage.save.muted = false;
 		interfaceState.savedSfxVolume = interfaceState.sfxVolume;
 		ApplyVolumes();
 		interfaceState.settingsDirty = true;
 	}
-	if (UiButton(Rectangle{ 500, 198 + ofs, 130, 28 }, storage.save.muted ? "Muted" : "Mute", virtualMouse))
+	if (UiButton(Rectangle{ 530, 277 + ofs, 140, 36 }, storage.save.muted ? "Muted" : "Mute", virtualMouse))
 	{
 		// capture the current levels before muting so unmute animates back to them; the fade to/from 0 is in UpdateVolumeAnimation()
 		if (!storage.save.muted)
@@ -110,19 +120,19 @@ void FlappyGame::DrawSettingsScreen(Vector2 virtualMouse){
 		interfaceState.settingsDirty = true;
 	}
 
-	DrawText("Display", 90, (int)(270 + ofs), 22, DARKBLUE);
+	DrawText("Display", kLabelX, (int)(380 + ofs), kHeadingFs, DARKBLUE);
 	{
 		bool borderless = storage.save.resIndex == ResIndex::BORDERLESS;
-		DrawText("VSync:", 110, (int)(304 + ofs), 18, RAYWHITE);
-		if (UiButton(Rectangle{ 240, 298 + ofs, 90, 28 }, storage.save.vsync ? "ON" : "OFF", virtualMouse))
+		DrawText("VSync:", kLabelX, (int)(435 + ofs), kLabelFs, RAYWHITE);
+		if (UiButton(Rectangle{ 240, 427 + ofs, 100, 36 }, storage.save.vsync ? "ON" : "OFF", virtualMouse))
 		{
 			storage.save.vsync = !storage.save.vsync;
 			ApplyFpsSettings(storage.save.vsync, storage.save.fpsCap);
 			interfaceState.settingsDirty = true;
 		}
 		const char* fsLabel = borderless ? "Borderless" : "Windowed";
-		DrawText("Display:", 110, (int)(338 + ofs), 18, RAYWHITE);
-		if (UiButton(Rectangle{ 240, 332 + ofs, 170, 28 }, fsLabel, virtualMouse))
+		DrawText("Display:", kLabelX, (int)(485 + ofs), kLabelFs, RAYWHITE);
+		if (UiButton(Rectangle{ 240, 477 + ofs, 180, 36 }, fsLabel, virtualMouse))
 		{
 			const ResIndex nextMode = borderless ? ResIndex::WINDOWED : ResIndex::BORDERLESS;
 			// snapshot the windowed size/maximized state before leaving it, so returning to Windowed restores it
@@ -133,16 +143,16 @@ void FlappyGame::DrawSettingsScreen(Vector2 virtualMouse){
 			storage.save.resIndex = nextMode;
 			interfaceState.settingsDirty = true;
 		}
-		DrawText("Borderless recommended (F11)", 425, (int)(330 + ofs), 13, SKYBLUE);
-		DrawText("Windowed-max crops the bottom", 425, (int)(348 + ofs), 13, SKYBLUE);
-		DrawText("Show FPS:", 110, (int)(372 + ofs), 18, RAYWHITE);
-		if (UiButton(Rectangle{ 240, 366 + ofs, 90, 28 }, storage.save.showFps ? "ON" : "OFF", virtualMouse))
+		DrawText("Borderless recommended (F11)", kHintX, (int)(477 + ofs), kHintFs, SKYBLUE);
+		DrawText("Windowed-max crops the bottom", kHintX, (int)(499 + ofs), kHintFs, SKYBLUE);
+		DrawText("Show FPS:", kLabelX, (int)(535 + ofs), kLabelFs, RAYWHITE);
+		if (UiButton(Rectangle{ 240, 527 + ofs, 100, 36 }, storage.save.showFps ? "ON" : "OFF", virtualMouse))
 		{
 			storage.save.showFps = !storage.save.showFps;
 			interfaceState.settingsDirty = true;
 		}
-		DrawText("(only while playing)", 350, (int)(372 + ofs), 14, SKYBLUE);
-		DrawText("FPS Cap:", 110, (int)(406 + ofs), 18, RAYWHITE);
+		DrawText("(only while playing)", 360, (int)(535 + ofs), kHintFs, SKYBLUE);
+		DrawText("FPS Cap:", kLabelX, (int)(585 + ofs), kLabelFs, RAYWHITE);
 		{
 			// the button cycles through these preset caps; it's a no-op while vsync drives the pacing
 			static const int caps[] = { 0, 30, 60, 90, 120, 144, 165, 180, 240 };
@@ -151,37 +161,39 @@ void FlappyGame::DrawSettingsScreen(Vector2 virtualMouse){
 			char buf[16];
 			if (storage.save.fpsCap == 0) snprintf(buf, sizeof(buf), "Unlimited");
 			else snprintf(buf, sizeof(buf), "%d", storage.save.fpsCap);
-			if (UiButton(Rectangle{ 240, 400 + ofs, 170, 28 }, storage.save.vsync ? "(VSync on)" : buf, virtualMouse) && !storage.save.vsync)
+			if (UiButton(Rectangle{ 240, 577 + ofs, 180, 36 }, storage.save.vsync ? "(VSync on)" : buf, virtualMouse) && !storage.save.vsync)
 			{
 				idx = (idx + 1) % (int)(sizeof(caps) / sizeof(caps[0]));
 				storage.save.fpsCap = caps[idx];
 				ApplyFpsSettings(storage.save.vsync, storage.save.fpsCap);
 				interfaceState.settingsDirty = true;
 			}
-			if (storage.save.vsync) DrawText("ignored while VSync is on", 430, (int)(406 + ofs), 14, GRAY);
+			if (storage.save.vsync) DrawText("ignored while VSync is on", kHintX, (int)(585 + ofs), kHintFs, SKYBLUE);
 		}
 	}
 
-	DrawText("Controls", 90, (int)(454 + ofs), 22, DARKBLUE);
-	DrawText("click a key to bind", 200, (int)(458 + ofs), 14, DARKGRAY);
-	// each control row: clicking it arms a rebind (the label reads "press a key" until the next press is captured up top)
-	DrawText("P1 Flap:", 110, (int)(488 + ofs), 18, RAYWHITE);
-	if (UiButton(Rectangle{ 220, 482 + ofs, 180, 28 }, interfaceState.settings.rebindTarget == RebindTarget::PLAYER_ONE_FLAP ? "press a key" : KeyName(storage.save.keyFlapP1), virtualMouse))
+	DrawText("Controls", kLabelX, (int)(660 + ofs), kHeadingFs, DARKBLUE);
+	// hint on its own line, well below the heading so they don't collide
+	DrawText("Click a key to bind", kLabelX, (int)(705 + ofs), kHintFs, SKYBLUE);
+	// each control row: clicking it arms a rebind (the label reads "press a key" until the next press is captured up top).
+	// buttons sit at x=290 (not 240) so the wide "Photo Mode:" label has room to render without bleeding under the button
+	DrawText("P1 Flap:", kLabelX, (int)(745 + ofs), kLabelFs, RAYWHITE);
+	if (UiButton(Rectangle{ 290, 737 + ofs, 190, 36 }, interfaceState.settings.rebindTarget == RebindTarget::PLAYER_ONE_FLAP ? "press a key" : KeyName(storage.save.keyFlapP1), virtualMouse))
 		interfaceState.settings.rebindTarget = RebindTarget::PLAYER_ONE_FLAP;
-	DrawText("P2 Flap:", 110, (int)(522 + ofs), 18, RAYWHITE);
-	if (UiButton(Rectangle{ 220, 516 + ofs, 180, 28 }, interfaceState.settings.rebindTarget == RebindTarget::PLAYER_TWO_FLAP ? "press a key" : KeyName(storage.save.keyFlapP2), virtualMouse))
+	DrawText("P2 Flap:", kLabelX, (int)(790 + ofs), kLabelFs, RAYWHITE);
+	if (UiButton(Rectangle{ 290, 782 + ofs, 190, 36 }, interfaceState.settings.rebindTarget == RebindTarget::PLAYER_TWO_FLAP ? "press a key" : KeyName(storage.save.keyFlapP2), virtualMouse))
 		interfaceState.settings.rebindTarget = RebindTarget::PLAYER_TWO_FLAP;
-	DrawText("Pause:", 110, (int)(556 + ofs), 18, RAYWHITE);
-	if (UiButton(Rectangle{ 220, 550 + ofs, 180, 28 }, interfaceState.settings.rebindTarget == RebindTarget::PAUSE ? "press a key" : KeyName(storage.save.keyPause), virtualMouse))
+	DrawText("Pause:", kLabelX, (int)(835 + ofs), kLabelFs, RAYWHITE);
+	if (UiButton(Rectangle{ 290, 827 + ofs, 190, 36 }, interfaceState.settings.rebindTarget == RebindTarget::PAUSE ? "press a key" : KeyName(storage.save.keyPause), virtualMouse))
 		interfaceState.settings.rebindTarget = RebindTarget::PAUSE;
-	DrawText("Photo Mode:", 110, (int)(590 + ofs), 18, RAYWHITE);
-	if (UiButton(Rectangle{ 220, 584 + ofs, 180, 28 }, interfaceState.settings.rebindTarget == RebindTarget::PHOTO_MODE ? "press a key" : KeyName(storage.save.keyPhotoMode), virtualMouse))
+	DrawText("Photo Mode:", kLabelX, (int)(880 + ofs), kLabelFs, RAYWHITE);
+	if (UiButton(Rectangle{ 290, 872 + ofs, 190, 36 }, interfaceState.settings.rebindTarget == RebindTarget::PHOTO_MODE ? "press a key" : KeyName(storage.save.keyPhotoMode), virtualMouse))
 		interfaceState.settings.rebindTarget = RebindTarget::PHOTO_MODE;
-	DrawText("Restart:", 110, (int)(624 + ofs), 18, RAYWHITE);
-	if (UiButton(Rectangle{ 220, 618 + ofs, 180, 28 }, interfaceState.settings.rebindTarget == RebindTarget::RESTART ? "press a key" : KeyName(storage.save.keyRestart), virtualMouse))
+	DrawText("Restart:", kLabelX, (int)(925 + ofs), kLabelFs, RAYWHITE);
+	if (UiButton(Rectangle{ 290, 917 + ofs, 190, 36 }, interfaceState.settings.rebindTarget == RebindTarget::RESTART ? "press a key" : KeyName(storage.save.keyRestart), virtualMouse))
 		interfaceState.settings.rebindTarget = RebindTarget::RESTART;
 	// reset every keybind to its canonical default, read from a default-constructed SaveData so it never drifts from save.h
-	if (UiButton(Rectangle{ 410, 540 + ofs, 225, 32 }, "Reset Keybinds", virtualMouse))
+	if (UiButton(Rectangle{ 510, 825 + ofs, 230, 40 }, "Reset Keybinds", virtualMouse))
 	{
 		const SaveData defaults{};
 		storage.save.keyFlapP1 = defaults.keyFlapP1;
@@ -193,38 +205,38 @@ void FlappyGame::DrawSettingsScreen(Vector2 virtualMouse){
 		interfaceState.settingsDirty = true;
 	}
 
-	DrawText("Screenshots", 90, (int)(666 + ofs), 22, DARKBLUE);
-	DrawText("Tap the Photo Mode key to capture", 110, (int)(702 + ofs), 16, RAYWHITE);
-	DrawText("Hold it to enter; drag/arrows pan, wheel or +/- zoom", 110, (int)(730 + ofs), 16, RAYWHITE);
-	DrawText("Saved to your Pictures folder and copied to the clipboard", 110, (int)(758 + ofs), 14, SKYBLUE);
+	DrawText("Screenshots", kLabelX, (int)(990 + ofs), kHeadingFs, DARKBLUE);
+	DrawText("Tap the Photo Mode key to capture", kLabelX, (int)(1045 + ofs), 18, RAYWHITE);
+	DrawText("Hold it to enter; drag/arrows pan, wheel or +/- zoom", kLabelX, (int)(1075 + ofs), 18, RAYWHITE);
+	DrawText("Saved to your Pictures folder and copied to the clipboard", kLabelX, (int)(1105 + ofs), kHintFs, SKYBLUE);
 
-	DrawText("Gameplay", 90, (int)(794 + ofs), 22, DARKBLUE);
+	DrawText("Gameplay", kLabelX, (int)(1170 + ofs), kHeadingFs, DARKBLUE);
 	{
-		DrawText("Show ghost", 110, (int)(832 + ofs), 18, RAYWHITE);
-		if (UiButton(Rectangle{ 470, 828 + ofs, 90, 26 }, storage.save.showGhost ? "ON" : "OFF", virtualMouse))
+		DrawText("Show ghost", kLabelX, (int)(1225 + ofs), kLabelFs, RAYWHITE);
+		if (UiButton(Rectangle{ 500, 1217 + ofs, 100, 36 }, storage.save.showGhost ? "ON" : "OFF", virtualMouse))
 		{
 			storage.save.showGhost = !storage.save.showGhost;
 			interfaceState.settingsDirty = true;
 		}
-		DrawText("Shows your best-score run", 110, (int)(860 + ofs), 14, SKYBLUE);
+		DrawText("Shows your best-score run", kLabelX, (int)(1260 + ofs), kHintFs, SKYBLUE);
 
-		DrawText("Ghost opacity:", 110, (int)(894 + ofs), 18, RAYWHITE);
+		DrawText("Ghost opacity:", kLabelX, (int)(1300 + ofs), kLabelFs, RAYWHITE);
 		float ghostOpacity = storage.save.ghostOpacity / 100.0f;   // slider is 0..1; stored as a 0..100 percent
-		if (UiSlider(Rectangle{ 280, 898 + ofs, 220, 12 }, ghostOpacity, virtualMouse))
+		if (UiSlider(Rectangle{ 360, 1308 + ofs, 200, 12 }, ghostOpacity, virtualMouse))
 		{
 			storage.save.ghostOpacity = (int)(ghostOpacity * 100.0f + 0.5f);
 			interfaceState.settingsDirty = true;
 		}
-		DrawText(TextFormat("%d%%", storage.save.ghostOpacity), 520, (int)(894 + ofs), 18, SKYBLUE);
+		DrawText(TextFormat("%d%%", storage.save.ghostOpacity), 580, (int)(1300 + ofs), kLabelFs, SKYBLUE);
 
 		// two plain on/off toggles, driven through pointers so the row layout doesn't repeat
 		bool* flags[2] = { &storage.save.reduceMotion, &storage.save.largerHud };
 		const char* labels[2] = { "Reduce motion", "Larger HUD text" };
 		for (int i = 0; i < 2; i++)
 		{
-			float y = 934.0f + i * 34.0f + ofs;
-			DrawText(labels[i], 110, (int)y + 4, 18, RAYWHITE);
-			if (UiButton(Rectangle{ 470, y, 90, 26 }, *flags[i] ? "ON" : "OFF", virtualMouse))
+			float y = 1345.0f + i * 42.0f + ofs;
+			DrawText(labels[i], kLabelX, (int)y + 4, kLabelFs, RAYWHITE);
+			if (UiButton(Rectangle{ 500, y, 100, 36 }, *flags[i] ? "ON" : "OFF", virtualMouse))
 			{
 				*flags[i] = !*flags[i];
 				interfaceState.settingsDirty = true;

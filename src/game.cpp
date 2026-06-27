@@ -187,8 +187,9 @@ void FlappyGame::Update()
 			if (mainMenu.splashOffset < -5) mainMenu.splashRising = true;
 		}
 
-		// let the player type their leaderboard name (only while editing); cap at 15 printable ASCII chars
-		if (mainMenu.editingName)
+		// let the player type their leaderboard name (only while editing AND the exit dialog isn't up); cap at 15 printable
+		// ASCII chars. drain the char queue unconditionally when typing is blocked so a build-up doesn't fire later
+		if (mainMenu.editingName && !mainMenu.exitConfirm)
 		{
 			int ch = GetCharPressed();
 			while (ch > 0)
@@ -197,6 +198,10 @@ void FlappyGame::Update()
 				ch = GetCharPressed();
 			}
 			if (IsKeyPressed(KEY_BACKSPACE) && !storage.save.playerName.empty()) storage.save.playerName.pop_back();
+		}
+		else if (mainMenu.exitConfirm)
+		{
+			while (GetCharPressed() != 0) {}   // swallow queued chars so they don't leak in after the dialog closes
 		}
 
 		if (!mainMenu.exitConfirm && IsKeyPressed(KEY_ENTER))
@@ -214,8 +219,14 @@ void FlappyGame::Update()
 			}
 			else StartNormal();
 		}
-		// ESC toggles the exit-confirm dialog (single source of truth, so we never both open AND close it on one frame)
-		if (!mainMenu.editingName && IsKeyPressed(KEY_ESCAPE)) mainMenu.exitConfirm = !mainMenu.exitConfirm;
+		// ESC: if the dialog is up, ESC closes it (regardless of name-editing state). otherwise ESC toggles the dialog
+		// open when we're not in name-editing mode. without the dialog-closes-first branch, a player who clicked the X
+		// while editing their name had no keyboard way out of the dialog
+		if (IsKeyPressed(KEY_ESCAPE))
+		{
+			if (mainMenu.exitConfirm) mainMenu.exitConfirm = false;
+			else if (!mainMenu.editingName) mainMenu.exitConfirm = true;
+		}
 	}
 	else if (interfaceState.current == GameState::READY || interfaceState.current == GameState::PLAYING)
 	{

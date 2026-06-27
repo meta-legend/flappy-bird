@@ -121,20 +121,23 @@ MainMenuAction DrawMainMenuScreen(
 		if (UiIconButton(uiTextures.iconAchievements, vmouse, iconX0 + iconStep * 2, iconY)) setAction(MainMenuAction::OpenAchievements);
 		if (UiIconButton(uiTextures.iconStats, vmouse, iconX0 + iconStep * 3, iconY)) setAction(MainMenuAction::OpenStats);
 		if (UiIconButton(uiTextures.iconInfo, vmouse, iconX0 + iconStep * 4, iconY)) setAction(MainMenuAction::OpenInfo);
+	}
 
-		if (exitConfirm)
-		{
-			vmouse = menuMouseSaved;   // give the dialog buttons the real cursor back
-			DrawRectangle(0, 0, VIRTUAL_W, VIRTUAL_H, Fade(BLACK, 0.55f));
-			float dw = 380, dh = 180, dx = VIRTUAL_W / 2 - dw / 2, dy = VIRTUAL_H / 2 - dh / 2;
-			Rectangle dlg = { dx, dy, dw, dh };
-			DrawRectangleRec(dlg, Color{ 25, 35, 60, 255 });
-			DrawRectangleLinesEx(dlg, 3, RAYWHITE);
-			const char* q = "Are you sure you want to exit?";
-			DrawText(q, VIRTUAL_W / 2 - MeasureText(q, 22) / 2, (int)dy + 38, 22, RAYWHITE);
-			if (UiButton(Rectangle{ dx + 30, dy + 100, 150, 44 }, "Yes, exit", vmouse)) setAction(MainMenuAction::Quit);
-			if (UiButton(Rectangle{ dx + dw - 180, dy + 100, 150, 44 }, "Cancel", vmouse)) setAction(MainMenuAction::CancelExit);
-		}
+	// exit confirm dialog draws OUTSIDE the editingName/else split so clicking the X icon while editing the name still
+	// pops the dialog (it used to be nested in the else and was invisible during name entry, leaving the player stuck)
+	if (exitConfirm)
+	{
+		vmouse = menuMouseSaved;   // give the dialog buttons the real cursor back
+		DrawRectangle(0, 0, VIRTUAL_W, VIRTUAL_H, Fade(BLACK, 0.55f));
+		// dw widened from 380 to 500 so "Are you sure you want to exit?" fits with comfortable side padding
+		float dw = 500, dh = 180, dx = VIRTUAL_W / 2 - dw / 2, dy = VIRTUAL_H / 2 - dh / 2;
+		Rectangle dlg = { dx, dy, dw, dh };
+		DrawRectangleRec(dlg, Color{ 25, 35, 60, 255 });
+		DrawRectangleLinesEx(dlg, 3, RAYWHITE);
+		const char* q = "Are you sure you want to exit?";
+		DrawText(q, VIRTUAL_W / 2 - MeasureText(q, 22) / 2, (int)dy + 38, 22, RAYWHITE);
+		if (UiButton(Rectangle{ dx + 50, dy + 100, 160, 44 }, "Yes, exit", vmouse)) setAction(MainMenuAction::Quit);
+		if (UiButton(Rectangle{ dx + dw - 210, dy + 100, 160, 44 }, "Cancel", vmouse)) setAction(MainMenuAction::CancelExit);
 	}
 
 	return action;

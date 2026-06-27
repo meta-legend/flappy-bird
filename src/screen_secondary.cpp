@@ -62,7 +62,6 @@ bool DrawLeaderboardScreen(bool& lbDaily, const SaveData& sd, Vector2 vmouse)
 	}
 
 	bool backClicked = UiButton(Rectangle{ VIRTUAL_W / 2 - 90, 540.0f - FillModeBottomCrop(), 180, 40 }, "Back", vmouse);
-	DrawText("or press ESC", VIRTUAL_W / 2 - MeasureText("or press ESC", 16) / 2, 584, 16, BLUE);
 	return backClicked;
 }
 
@@ -82,7 +81,6 @@ bool DrawCreditsScreen(Vector2 vmouse)
 		OpenUrl("https://www.youtube.com/channel/UCsLlqLIE-TqDq3lh5kU2PeA");
 
 	bool backClicked = UiButton(Rectangle{ VIRTUAL_W / 2 - 90, 470, 180, 42 }, "Back", vmouse);
-	DrawText("or press ESC", VIRTUAL_W / 2 - MeasureText("or press ESC", 16) / 2, 516, 16, BLUE);
 	return backClicked;
 }
 
@@ -105,7 +103,6 @@ bool DrawTrophiesScreen(int bestScore, Texture2D (&medalTextures)[Constants::Med
 		DrawText(req.c_str(), (int)(cx - MeasureText(req.c_str(), 16) / 2), (int)(cy + 75), 16, unlocked ? DARKGREEN : GRAY);
 	}
 	bool backClicked = UiButton(Rectangle{ VIRTUAL_W / 2 - 90, 470, 180, 42 }, "Back", vmouse);
-	DrawText("or press ESC", VIRTUAL_W / 2 - MeasureText("or press ESC", 16) / 2, 516, 16, BLUE);
 	return backClicked;
 }
 
@@ -180,6 +177,5 @@ bool DrawInfoScreen(const std::string& playerName, Vector2 vmouse)
 	DrawText("Font: PublicPixel", (int)colX + 10, 390, 20, RAYWHITE);
 
 	bool backClicked = UiButton(Rectangle{ VIRTUAL_W / 2 - 90, 530.0f - FillModeBottomCrop(), 180, 40 }, "Back", vmouse);
-	DrawText("or press ESC", VIRTUAL_W / 2 - MeasureText("or press ESC", 16) / 2, 578, 16, BLUE);
 	return backClicked;
 }

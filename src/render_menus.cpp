@@ -116,9 +116,10 @@ PauseMenuAction DrawPauseMenu(bool confirmQuit, int score, int bestScore,
 		return PauseMenuAction::Resume;
 	if (sandboxEffect != SandboxEffect::NONE)
 	{
-		if (UiButton(Rectangle{ buttonX, panelY + 200, buttonWidth, 36 }, "Restart Sandbox", virtualMouse)) return PauseMenuAction::RestartSandbox;
-		if (UiButton(Rectangle{ buttonX, panelY + 240, buttonWidth, 36 }, "Settings", virtualMouse)) return PauseMenuAction::OpenSettings;
-		if (UiButton(Rectangle{ buttonX, panelY + 280, buttonWidth, 36 }, "Return to Tutorial", virtualMouse)) return PauseMenuAction::ReturnToTutorial;
+		// Settings deliberately omitted in sandbox mode: rebinding keys mid-tutorial-demo would let the player escape
+		// the controlled lesson and adds no value (the sandbox isn't a real run). Restart + Return are enough
+		if (UiButton(Rectangle{ buttonX, panelY + 210, buttonWidth, 36 }, "Restart Sandbox", virtualMouse)) return PauseMenuAction::RestartSandbox;
+		if (UiButton(Rectangle{ buttonX, panelY + 260, buttonWidth, 36 }, "Return to Tutorial", virtualMouse)) return PauseMenuAction::ReturnToTutorial;
 	}
 	else
 	{

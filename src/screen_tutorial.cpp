@@ -207,7 +207,7 @@ TutorialScreenResult DrawTutorialScreen(
 			if (!cur.empty()) commit(cur);
 			rowCached[pageIndex] = true;
 		}
-		int by = 350 - bodyLift;
+		int by = 320 - bodyLift;
 		for (auto& r : rowCache[pageIndex])
 		{
 			DrawText(r.first.c_str(), r.second, by, bodyFs, DARKBLUE);

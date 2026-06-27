@@ -18,7 +18,7 @@ enum class Achievement : int
 	Untouchable,
 	TrophyCabinet,
 	DailyDevotee,
-	Speedrunner,
+	HighRoller,
 	StyleSwitch,
 	COUNT
 };
@@ -72,7 +72,7 @@ namespace Constants
 		inline constexpr float ShieldPickupPitch = 1.25f;   // collect-sound pitch for a shield orb
 		inline constexpr float SlowPickupPitch = 0.9f;      // collect-sound pitch for the slow time orb
 		inline constexpr float SpeedPickupPitch = 1.55f;    // collect-sound pitch for the fast time orb
-		inline constexpr float TopPipeShieldPushFactor = 0.25f; // downward shove when a shield eats a top-pipe hit
+		inline constexpr float TopPipeShieldPushFactor = 0.20f; // downward shove when a shield eats a top-pipe hit
 		inline constexpr float ShieldGrace = 0.3f;          // seconds of invulnerability after a shield absorbs a hit
 		inline constexpr int StartScore = 15;               // pickups begin spawning at this score
 		inline constexpr int ChancePercent = 15;            // percent chance an eligible pipe carries a pickup
@@ -127,13 +127,13 @@ namespace Constants
 		inline constexpr const char* Names[Count] = {
 			"First Flight", "Centurion", "Marathon", "Persistent", "Flap Master",
 			"Night Owl", "Daylight", "Untouchable", "Trophy Cabinet", "Daily Devotee",
-			"Speedrunner", "Style Switch"
+			"High Roller", "Style Switch"
 		};
 		inline constexpr const char* Descriptions[Count] = {
 			"Pass your first pipe", "Pass 100 pipes total", "Pass 1,000 pipes total",
 			"Crash 100 times", "Flap 10,000 times", "Reach 50 at night",
 			"Reach 50 in daylight", "Reach 30 with ghost off", "Earn every medal tier",
-			"Finish 7 daily challenges", "Reach 20 in under 30s", "Use both birds 10x each"
+			"Finish 7 daily challenges", "Reach 100 in Normal mode", "Use both birds 10x each"
 		};
 	}
 

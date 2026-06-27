@@ -232,7 +232,8 @@ void FlappyGame::UpdateSinglePlayer(const Theme& currentTheme, float frameScale)
 					if (finalScore >= 30 && !storage.save.showGhost) UnlockAchievement(Achievement::Untouchable);
 					if (storage.save.bestScore >= 50)            UnlockAchievement(Achievement::TrophyCabinet);
 					if (storage.save.dailyCount >= 7)            UnlockAchievement(Achievement::DailyDevotee);
-					if (finalScore >= 20 && singlePlayer.runClock < 30.0f) UnlockAchievement(Achievement::Speedrunner);
+					// High Roller: pure Normal-mode milestone (no Classic / Daily, where the difficulty curve is different)
+					if (finalScore >= 100 && !singlePlayer.dailyMode && !singlePlayer.endlessMode) UnlockAchievement(Achievement::HighRoller);
 					if (storage.save.deathsPerSkin[0] >= 10 && storage.save.deathsPerSkin[1] >= 10) UnlockAchievement(Achievement::StyleSwitch);
 					WriteSave(storage.save, storage.savePath);
 					if (!singlePlayer.scoreSubmitted && singlePlayer.savedScore >= 0)
