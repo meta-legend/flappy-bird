@@ -16,7 +16,7 @@
 
 namespace
 {
-	// format constants — must stay in sync with the reader in pak_archive.cpp
+	// format constants, must stay in sync with the reader in pak_archive.cpp
 	constexpr char MAGIC[4] = { 'F', 'B', 'P', 'K' };
 	constexpr uint32_t VERSION = 1;
 	constexpr uint32_t FLAG_XOR = 0x1;
@@ -25,7 +25,7 @@ namespace
 	const std::vector<std::string> PACK_SUBDIRS = {
 		"images", "font", "shaders", "sounds"
 	};
-
+	
 	uint32_t Xorshift32(uint32_t state)
 	{
 		state ^= state << 13;
