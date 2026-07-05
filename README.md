@@ -20,10 +20,10 @@ Grab the build for your OS from the
 it, and run the game (Supports Windows, Linux,
 macOS).
 
-> **Heads up about antivirus warnings:** the Windows build is unsigned, so Windows Defender
+> **Antivirus:** the Windows build is unsigned, so Windows Defender
 > SmartScreen or your antivirus may flag it on first launch. The binary is
 > safe. If SmartScreen shows up, click **More info** then **Run anyway**. If
-> you'd rather not trust the prebuilt binary, build from source yourself with
+> you don't trust the prebuilt binary, build from source yourself with
 > the steps at the bottom.
 
 ## How To Play:
@@ -37,15 +37,16 @@ leaderboard automatically.
 
 ## Build from source
 
-All dependencies are resolved by vcpkg automatically through the manifest in `vcpkg.json` and the private registry in `vcpkg-configuration.json`. 
+All dependencies are resolved by vcpkg automatically through the manifest in vcpkg.json and the private registry in vcpkg-configuration.json. 
 
-**Prerequisites (all platforms):**
+### Prerequisites (all platforms):
 - CMake 3.28+
 - A C++17 compiler
 - vcpkg (commands to install are provided below though)
 
 ### Windows
 
+> ik im cool for using the .bat code preview
 ```bat
 :: one-time vcpkg setup
 git clone https://github.com/microsoft/vcpkg C:\vcpkg
@@ -60,10 +61,10 @@ cmake --preset windows-release
 cmake --build --preset windows-release
 ```
 
-The exe lands at `build/windows-release/Flappy Bird.exe`.
+The exe lands at build/windows-release/Flappy Bird.exe.
 
-**If you have Visual Studio:** After the one-time `setx VCPKG_ROOT` step above,
-File → Open → Folder and pick the repo. VS reads `CMakePresets.json` and
+**If you have Visual Studio:** After the one-time setx VCPKG_ROOT step above,
+File → Open → Folder and pick the repo. VS reads CMakePresets.json and
 you can build from the toolbar.
 
 ### Linux & macOS
@@ -82,8 +83,8 @@ cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcp
 cmake --build build
 ```
 
-The binary lands at `build/Flappy Bird` (Linux) or
-`build/Flappy Bird.app/Contents/MacOS/Flappy Bird` (macOS).
+The binary lands at build/Flappy Bird (Linux) or
+build/Flappy Bird.app/Contents/MacOS/Flappy Bird (macOS).
 
 ## Credits
 
