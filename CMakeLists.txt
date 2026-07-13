@@ -161,15 +161,22 @@ endif()
 
 # cpack for distrobution
 install(TARGETS Flappy_Bird RUNTIME DESTINATION "." BUNDLE DESTINATION ".")
-# The game loads ./resources relative to the executable. On Windows/Linux that's the
-# package root (next to the exe). Inside a macOS .app the executable lives in
-# Contents/MacOS, so the resources must be installed there too for the packaged
-# bundle to be self-contained and relocatable.
+# The game opens ./data.pak relative to the executable and only falls back to loose ./resources when the pak is absent.
+# On Windows/Linux "." is the package root (next to the exe); inside a macOS .app the exe lives in Contents/MacOS, so the
+# asset must be installed there too for the bundle to be self-contained and relocatable.
 if(APPLE)
-    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/resources"
-            DESTINATION "Flappy Bird.app/Contents/MacOS")
+    set(_ASSET_DEST "Flappy Bird.app/Contents/MacOS")
 else()
-    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/resources" DESTINATION ".")
+    set(_ASSET_DEST ".")
+endif()
+if(PAK_PACK)
+    # ship the single packed data.pak (built next to the exe by the PAK_PACK POST_BUILD above) instead of handing out
+    # the raw resources folder. install(FILES) accepts the genex path; the POST_BUILD runs during the build, so the
+    # file exists by the time `package`/`install` evaluates it
+    install(FILES "$<TARGET_FILE_DIR:Flappy_Bird>/data.pak" DESTINATION "${_ASSET_DEST}")
+else()
+    # dev builds without packing still ship the loose resources so the game can run
+    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/resources" DESTINATION "${_ASSET_DEST}")
 endif()
 
 set(CPACK_PACKAGE_NAME "FlappyBird")
