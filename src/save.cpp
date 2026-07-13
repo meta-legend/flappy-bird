@@ -11,11 +11,10 @@
 
 // 4-byte signature, so we can quickly reject other files / earlier formats
 static const char SAVE_MAGIC[4] = { 'F', 'B', 'S', 'V' };
-// current save format. only versions in the loader's accept-set carry forward; anything else is rejected like it
-// doesn't exist. bump this whenever the field layout changes, AND add a migration branch so the existing save is
-// preserved. v5 appended versusPipes + versusWins (2-player cosmetic + its unlock counter)
+// current save format. no migration is kept: only the exact current version is accepted, anything else is rejected
+// like it doesn't exist. if the field layout changes, either bump this and wipe (single-user project, no players to
+// migrate) OR re-introduce a migration branch below for the versions you need to carry forward.
 static const int32_t SAVE_VERSION = 5;
-static const int32_t MIN_READABLE_SAVE_VERSION = 4;   // v4 saves migrate forward (missing v5 fields default to 0/false)
 // FNV-1a is fast + small; XOR-ing the result with a per-build constant means you can't just copy another
 // save.bin's checksum byte-for-byte and graft it on
 static const uint32_t SAVE_SECRET = 0xa9b714f3u;
@@ -149,7 +148,7 @@ bool LoadSave(SaveData& sd, const std::string& path)
 
 	int32_t ver = 0;
 	rI(ver);
-	if (ver < MIN_READABLE_SAVE_VERSION || ver > SAVE_VERSION) return false;   // outside the accept-set = treat as "no save"
+	if (ver != SAVE_VERSION) return false;   // not the current version = treat as "no save" (no migration kept)
 	rS(sd.playerName);
 	sd.playerName = TrimAsciiWhitespace(sd.playerName);
 	rI(sd.bestScore);
@@ -193,7 +192,7 @@ bool LoadSave(SaveData& sd, const std::string& path)
 	rI(sd.keyPhotoMode);
 	rI(sd.keyRestart);
 	rI(sd.bestDailyTodayScore);
-	if (ver >= 5) { rB(sd.versusPipes); rI(sd.versusWins); }   // v5 fields; v4 files leave them at defaults (off / 0)
+	rB(sd.versusPipes); rI(sd.versusWins);
 	// defensive clamps: the checksum already rejects tampered/truncated files, but a genuine bug could still write an
 	// out-of-range value. counters above ~100M are physically impossible, so zero them rather than show garbage on the
 	// Stats screen, and keep enum/key fields in range so they can't index arrays out of bounds

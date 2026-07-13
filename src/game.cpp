@@ -124,8 +124,9 @@ void FlappyGame::ProcessInput()
 		ToggleBorderlessMode(storage.save);
 		interfaceState.settingsDirty = true;
 	}
-	if (IsKeyPressed(KEY_F1)) singlePlayer.showHitboxes = !singlePlayer.showHitboxes;   // dev: hitbox overlay
-	if (IsKeyPressed(KEY_N)) singlePlayer.noClip = !singlePlayer.noClip;                // dev: noclip (ignore ground + pipes)
+	// dev toggles disabled for release (uncomment on a dev machine to re-enable):
+	// if (IsKeyPressed(KEY_F1)) singlePlayer.showHitboxes = !singlePlayer.showHitboxes;   // dev: hitbox overlay
+	// if (IsKeyPressed(KEY_N)) singlePlayer.noClip = !singlePlayer.noClip;                // dev: noclip (ignore ground + pipes)
 
 	ProcessPhotoModeInput();
 

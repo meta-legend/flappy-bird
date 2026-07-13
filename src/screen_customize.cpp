@@ -101,7 +101,8 @@ CustomizeScreenResult DrawCustomizeScreen(
 	// tested without touching the real save. it's a pure display override — the save is untouched, and because the
 	// click handlers all gate on the same display flags, locked tiles stay unclickable in this mode too
 	static bool devNewPlayerView = false;
-	if (IsKeyPressed(KEY_F1)) devNewPlayerView = !devNewPlayerView;
+	// dev toggle disabled for release (uncomment on a dev machine to re-enable):
+	// if (IsKeyPressed(KEY_F1)) devNewPlayerView = !devNewPlayerView;
 	const unsigned long long dispUnlockedSkins  = devNewPlayerView ? 3ull : sd.unlockedSkins;   // yellow + orange are the starting birds
 	const unsigned long long dispUnlockedThemes = devNewPlayerView ? 1ull : sd.unlockedThemes;  // classic is the only starting theme
 	const int dispBestScore = devNewPlayerView ? 0 : sd.bestScore;                              // pipe style/color gate on best score
