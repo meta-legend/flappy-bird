@@ -51,7 +51,7 @@ std::string SaveDir()
 
 std::string ScreenshotDir()
 {
-	// screenshots are user-facing artifacts meant to be found/shared, so they go in the OS picture library —
+	// screenshots are user-facing artifacts meant to be found/shared, so they go in the OS picture library 
 	// NOT next to save.bin in AppData (hidden, and on an installed build the exe dir often isn't even writable)
 #ifdef _WIN32
 	std::string home = GetEnvVar("USERPROFILE");
@@ -76,8 +76,8 @@ std::string ScreenshotDir()
 std::string LeaderboardUrl()
 {
 	// FLAPPY_LEADERBOARD_URL overrides the endpoint (e.g. point dev builds at a local server); otherwise the live one
-	std::string env = GetEnvVar("FLAPPY_LEADERBOARD_URL");
-	if (!env.empty()) return env;
+	// std::string env = GetEnvVar("FLAPPY_LEADERBOARD_URL");
+	// if (!env.empty()) return env;
 	return "https://mxtalegend.netlify.app/api/leaderboard";
 }
 
