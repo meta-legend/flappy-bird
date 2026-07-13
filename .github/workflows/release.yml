@@ -92,7 +92,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: FlappyBird-${{ runner.os }}
-          path: build/package/*
+          # only the final CPack archive, NOT the _CPack_Packages/ staging tree that also lives under build/package/.
+          # uploading the staging tree made the release step try to publish every loose resource file as its own asset
+          # (with same-named collisions across platforms, e.g. data.pak / theme.mp3 / *.png), which failed the release.
+          path: |
+            build/package/*.zip
+            build/package/*.tar.gz
           if-no-files-found: error
 
   release:
@@ -109,5 +114,8 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*
+          # publish only the per-platform archives (belt-and-suspenders with the narrowed upload path above)
+          files: |
+            artifacts/**/*.zip
+            artifacts/**/*.tar.gz
           generate_release_notes: true
