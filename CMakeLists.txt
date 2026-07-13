@@ -121,24 +121,25 @@ if(APPLE)
     set_source_files_properties("${FLAPPY_ICNS}" PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 endif()
 
-# Copy resources next to the binary so the game runs straight from the build tree
-add_custom_command(TARGET Flappy_Bird POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${CMAKE_CURRENT_SOURCE_DIR}/src/resources"
-            "$<TARGET_FILE_DIR:Flappy_Bird>/resources"
-    VERBATIM)
-
-# Optional asset packing. When -DPAK_PACK=ON is passed, after the build we
-# invoke the build_pak C++ tool to produce data.pak next to the exe. The game
-# loads from data.pak when present, falls back to ./resources/... otherwise,
-# so the raw resources are kept around for dev
-#
-# We build build_pak as a separate CMake target so it gets compiled with the
-# same toolchain as the main game and can be run manually from the build dir whenever assets change
+# Optional asset packing. When -DPAK_PACK=ON (default) we invoke the build_pak C++ tool after the build to produce
+# data.pak next to the exe, and ship ONLY that. The game loads ./data.pak when present, falling back to loose
+# ./resources otherwise, so the raw resources are only kept around for dev (PAK_PACK=OFF).
 option(PAK_PACK "Pack resources into data.pak after building" ON)
 option(PAK_XOR "Obfuscate the pak data section with XOR (not real encryption)" OFF)
 
-# build_pak is a tiny CLI tool that walks src/resources and writes data.pak.
+# When NOT packing, copy the loose resources next to the binary so the game runs straight from the build tree. When
+# packing we skip this: no loose assets should sit beside the exe (and, on macOS, get swept into the .app bundle by
+# install(TARGETS BUNDLE) — which is exactly what made an earlier release ship the whole resources tree inside the .app).
+if(NOT PAK_PACK)
+    add_custom_command(TARGET Flappy_Bird POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_CURRENT_SOURCE_DIR}/src/resources"
+                "$<TARGET_FILE_DIR:Flappy_Bird>/resources"
+        VERBATIM)
+endif()
+
+# build_pak is a tiny CLI tool that walks src/resources and writes data.pak. Built as a separate target so it uses the
+# same toolchain as the game and can be re-run manually from the build dir whenever assets change.
 add_executable(build_pak tools/build_pak.cpp)
 set_target_properties(build_pak PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 # Uses ML::File for directory walks + binary I/O, which now lives in File ML.
