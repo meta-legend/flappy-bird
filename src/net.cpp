@@ -35,7 +35,9 @@ std::string GetEnvVar(const char* name)
 
 std::string SaveDir()
 {
-	// per-OS app-data location, falling back to "." if the env var is missing
+	// per-OS app-data location, falling back to "." if the env var is missing.
+	// NOTE: the folder stays "FlappyBird" (the pre-rebrand name) on purpose — renaming it to match "Flappy Bird++"
+	// would orphan every existing save.bin. This is an internal hidden path, so the brand name doesn't belong here.
 #ifdef _WIN32
 	std::string base = GetEnvVar("LOCALAPPDATA");
 	if (base.empty()) base = ".";
@@ -56,11 +58,11 @@ std::string ScreenshotDir()
 #ifdef _WIN32
 	std::string home = GetEnvVar("USERPROFILE");
 	if (home.empty()) return ".\\screenshots";
-	return home + "\\Pictures\\Flappy Bird";
+	return home + "\\Pictures\\Flappy Bird++";
 #elif defined(__APPLE__)
 	std::string home = GetEnvVar("HOME");
 	if (home.empty()) return "./screenshots";
-	return home + "/Pictures/Flappy Bird";
+	return home + "/Pictures/Flappy Bird++";
 #else
 	std::string base = GetEnvVar("XDG_PICTURES_DIR");
 	if (base.empty())
@@ -69,7 +71,7 @@ std::string ScreenshotDir()
 		if (home.empty()) return "./screenshots";
 		base = home + "/Pictures";
 	}
-	return base + "/Flappy Bird";
+	return base + "/Flappy Bird++";
 #endif
 }
 

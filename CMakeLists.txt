@@ -62,9 +62,9 @@ add_executable(Flappy_Bird
     src/hmac_sha256.cpp)
 target_link_libraries(Flappy_Bird PRIVATE raylib glfw NetworkML::networkml FileML::fileml nlohmann_json::nlohmann_json)
 
-# Final shipped name is "Flappy Bird" (with a space). The CMake target stays
+# Final shipped name is "Flappy Bird++" (the itch.io brand). The CMake target stays
 # Flappy_Bird so every reference below keeps working; only the output file is renamed.
-set_target_properties(Flappy_Bird PROPERTIES OUTPUT_NAME "Flappy Bird")
+set_target_properties(Flappy_Bird PROPERTIES OUTPUT_NAME "Flappy Bird++")
 
 # Link-Time Optimization (whole-program optimization) for shipping builds only.
 # Maps to MSVC /GL + /LTCG (or -flto on GCC/Clang). Release-only so Debug stays fast
@@ -106,12 +106,13 @@ endif()
 # On macOS build a proper .app bundle with an Info.plist + icns icon
 if(APPLE)
     set_target_properties(Flappy_Bird PROPERTIES MACOSX_BUNDLE TRUE)
-    set(MACOSX_BUNDLE_BUNDLE_NAME "Flappy Bird")
+    set(MACOSX_BUNDLE_BUNDLE_NAME "Flappy Bird++")
+    # GUI identifier (reverse-DNS bundle ID) stays stable so macOS treats it as the same app across versions
     set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.metalegend.flappybird")
     set(MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}")
     set(MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
     set(MACOSX_BUNDLE_COPYRIGHT "Copyright (C) 2026 meta_legend")
-    set(MACOSX_BUNDLE_INFO_STRING "Flappy Bird ${PROJECT_VERSION}")
+    set(MACOSX_BUNDLE_INFO_STRING "Flappy Bird++ ${PROJECT_VERSION}")
     set(MACOSX_BUNDLE_ICON_FILE "flappy.icns")
     set_target_properties(Flappy_Bird PROPERTIES
         MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/src/Info.plist.in")
@@ -166,7 +167,7 @@ install(TARGETS Flappy_Bird RUNTIME DESTINATION "." BUNDLE DESTINATION ".")
 # On Windows/Linux "." is the package root (next to the exe); inside a macOS .app the exe lives in Contents/MacOS, so the
 # asset must be installed there too for the bundle to be self-contained and relocatable.
 if(APPLE)
-    set(_ASSET_DEST "Flappy Bird.app/Contents/MacOS")
+    set(_ASSET_DEST "Flappy Bird++.app/Contents/MacOS")
 else()
     set(_ASSET_DEST ".")
 endif()

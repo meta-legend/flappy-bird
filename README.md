@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="docs/bird.gif" alt="Flappy Bird" width="136" height="96">
+<img src="docs/bird.gif" alt="Flappy Bird++" width="136" height="96">
 
-# Flappy Bird
+# Flappy Bird++
 
 [![Version](https://img.shields.io/github/v/release/meta-legend/Flappy_Bird?label=version&sort=semver)](https://github.com/meta-legend/Flappy_Bird/releases/latest)
 [![Build & Release](https://github.com/meta-legend/Flappy_Bird/actions/workflows/release.yml/badge.svg?branch=master)](https://github.com/meta-legend/Flappy_Bird/actions/workflows/release.yml)
@@ -10,8 +10,9 @@
 
 </div>
 
-A Flappy Bird clone built in C++ with a global online leaderboard. Tap to fly, dodge the pipes, and chase the
-top spot.
+**Flappy Bird++** is a feature-rich Flappy Bird clone built in C++ with a global online leaderboard, multiple
+themes and game modes, unlockable cosmetics, achievements, and 2-player versus. Tap to fly, dodge the pipes, and
+chase the top spot.
 
 ## Download
 
@@ -61,7 +62,7 @@ cmake --preset windows-release
 cmake --build --preset windows-release
 ```
 
-The exe lands at build/windows-release/Flappy Bird.exe.
+The exe lands at build/windows-release/Flappy Bird++.exe.
 
 **If you have Visual Studio:** After the one-time setx VCPKG_ROOT step above,
 File → Open → Folder and pick the repo. VS reads CMakePresets.json and
@@ -83,8 +84,8 @@ cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcp
 cmake --build build
 ```
 
-The binary lands at build/Flappy Bird (Linux) or
-build/Flappy Bird.app/Contents/MacOS/Flappy Bird (macOS).
+The binary lands at "build/Flappy Bird++" (Linux) or
+"build/Flappy Bird++.app/Contents/MacOS/Flappy Bird++" (macOS).
 
 ## Credits
 

@@ -26,7 +26,7 @@ int main()
 	if (startupResolution == ResIndex::WINDOWED && startupMaximized) configFlags |= FLAG_WINDOW_MAXIMIZED;
 	SetConfigFlags(configFlags);
 
-	InitWindow(VIRTUAL_W, VIRTUAL_H, "Flappy Bird");
+	InitWindow(VIRTUAL_W, VIRTUAL_H, "Flappy Bird++");
 	SetExitKey(KEY_NULL);   // disable raylib's built-in ESC-to-quit; the game owns its own exit flow
 	SetFlappyWindowIcons();
 	LoadGameFont();

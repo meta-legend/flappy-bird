@@ -24,11 +24,11 @@ BEGIN
         BLOCK "040904b0"   // U.S. English, Unicode
         BEGIN
             VALUE "CompanyName",      "meta_legend"
-            VALUE "FileDescription",  "Flappy Bird"
+            VALUE "FileDescription",  "Flappy Bird++"
             VALUE "FileVersion",      "@PROJECT_VERSION@"
             VALUE "InternalName",     "Flappy_Bird"
-            VALUE "OriginalFilename", "Flappy Bird.exe"
-            VALUE "ProductName",      "Flappy Bird"
+            VALUE "OriginalFilename", "Flappy Bird++.exe"
+            VALUE "ProductName",      "Flappy Bird++"
             VALUE "ProductVersion",   "@PROJECT_VERSION@"
             VALUE "LegalCopyright",   "Copyright (C) 2026 meta_legend"
         END
