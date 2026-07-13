@@ -22,6 +22,7 @@ FlappyGame::FlappyGame(GamePlatform& platform)
 	storage.ghostPath = storage.saveDirectory + "/ghost.bin";
 	storage.classicGhostPath = storage.saveDirectory + "/classic_ghost.bin";
 	storage.dailyGhostPath = storage.saveDirectory + "/daily_ghost.bin";
+	storage.dailyTodayGhostPath = storage.saveDirectory + "/daily_today_ghost.bin";
 
 	resources.ui = LoadUiTextures();
 	resources.skins = LoadBirdSkins();
@@ -123,9 +124,25 @@ DaynightShaderHandle FlappyGame::MakeDaynightHandle() const
 
 void FlappyGame::ApplySelectedPipes()
 {
+	const int style = EnumValue(storage.save.pipeStyleIndex);
+	if (storage.save.versusPipes)
+	{
+		// "Versus" two-tone: every theme's ceiling pipe wears P1's bird colour, the floor pipe P2's (skin & pipe-color
+		// enums are parallel, so a skin index doubles as a pipe-color index). baked into the themes here so ALL modes
+		// render it; the two cells are kept resident by FreeUnusedPipes
+		const int c1 = EnumValue(storage.save.skinIndex);
+		const int c2 = EnumValue(storage.save.skinIndex2);
+		EnsurePipeLoaded(resources.pipeTextures, resources.flippedPipeTextures, style, c1);
+		EnsurePipeLoaded(resources.pipeTextures, resources.flippedPipeTextures, style, c2);
+		for (Theme& theme : resources.themes)
+		{
+			theme.pipe = resources.pipeTextures[style][c1];
+			theme.pipe180 = resources.flippedPipeTextures[style][c2];
+		}
+		return;
+	}
 	// the themes copy the selected pipe textures, so that cell must be resident first; EnsurePipeLoaded is a no-op if it already is
-	EnsurePipeLoaded(resources.pipeTextures, resources.flippedPipeTextures,
-		EnumValue(storage.save.pipeStyleIndex), EnumValue(storage.save.pipeColorIndex));
+	EnsurePipeLoaded(resources.pipeTextures, resources.flippedPipeTextures, style, EnumValue(storage.save.pipeColorIndex));
 	ApplyPipeChoice(resources.themes, resources.pipeTextures, resources.flippedPipeTextures,
 		storage.save.pipeStyleIndex, storage.save.pipeColorIndex);
 }
@@ -144,9 +161,14 @@ void FlappyGame::EnsureCustomizeCrossLoaded()
 
 void FlappyGame::FreeUnusedPipes()
 {
-	// drop every pipe cell except the selected gameplay pair (which the themes reference); caps the RAM cost of browsing the pickers
-	UnloadPipesExcept(resources.pipeTextures, resources.flippedPipeTextures,
-		EnumValue(storage.save.pipeStyleIndex), EnumValue(storage.save.pipeColorIndex));
+	// drop every pipe cell except the one(s) the themes reference; caps the RAM cost of browsing the pickers. the Versus
+	// two-tone references two cells (P1 + P2 bird colours) instead of the single pipeColorIndex cell, so keep both
+	const int style = EnumValue(storage.save.pipeStyleIndex);
+	if (storage.save.versusPipes)
+		UnloadPipesExcept(resources.pipeTextures, resources.flippedPipeTextures, style,
+			EnumValue(storage.save.skinIndex), EnumValue(storage.save.skinIndex2));
+	else
+		UnloadPipesExcept(resources.pipeTextures, resources.flippedPipeTextures, style, EnumValue(storage.save.pipeColorIndex));
 }
 
 void FlappyGame::UpdateActiveThemeVisuals()
@@ -242,16 +264,28 @@ void FlappyGame::GoToState(GameState target)
 
 void FlappyGame::SaveGhost(int finalScore)
 {
-	// each mode has its own ghost file, so a Classic run's ghost never bleeds into a Normal run
-	const std::string& path = singlePlayer.dailyMode ? storage.dailyGhostPath
+	// each mode has its own ghost file, so a Classic run's ghost never bleeds into a Normal run. daily also writes
+	// a second file for the all-time record ghost — see the death handler in scene_singleplayer_update.cpp, which
+	// calls SaveGhostRun directly when it wants both files updated
+	const std::string& path = singlePlayer.dailyMode ? storage.dailyTodayGhostPath
 		: (singlePlayer.endlessMode ? storage.classicGhostPath : storage.ghostPath);
 	SaveGhostRun(path, ghost.recordedFlaps, storage.save, finalScore);
 }
 
 void FlappyGame::LoadGhost()
 {
-	const std::string& path = singlePlayer.dailyMode ? storage.dailyGhostPath
-		: (singlePlayer.endlessMode ? storage.classicGhostPath : storage.ghostPath);
+	std::string path;
+	if (singlePlayer.dailyMode)
+	{
+		// once you've set a today's-best (i.e. finished at least one non-zero attempt today), race that. otherwise
+		// fall back to the all-time record ghost — a great past run on a different seed is still a fun pace car
+		const bool haveTodayGhost = storage.save.lastDailyDate == TodayYMD() && storage.save.bestDailyTodayScore > 0;
+		path = haveTodayGhost ? storage.dailyTodayGhostPath : storage.dailyGhostPath;
+	}
+	else
+	{
+		path = singlePlayer.endlessMode ? storage.classicGhostPath : storage.ghostPath;
+	}
 	ghost.valid = LoadGhostRun(path, ghost.playbackFlaps, ghost.skin, (int)resources.skins.size());
 }
 
@@ -341,6 +375,9 @@ void FlappyGame::StartDaily()
 	interfaceState.sandboxEffect = SandboxEffect::NONE;
 	singlePlayer.dailyMode = true;
 	singlePlayer.endlessMode = false;
+	// new day = wipe today's-best so this attempt starts from zero. lastDailyDate itself is bumped in the death
+	// handler, not here, so the runtime check "have they tried today yet" stays true only after a real completion
+	if (storage.save.lastDailyDate != TodayYMD()) storage.save.bestDailyTodayScore = 0;
 	SetRandomSeed((unsigned)TodayYMD());   // date seed = the same layout for everyone today
 	StartGame();
 }
@@ -410,6 +447,7 @@ void FlappyGame::StartVersus()
 	versus.readyTime = 0.0f;
 	versus.runClock = 0.0f;
 	versus.windActive = false;
+	versus.resultRecorded = false;
 	interfaceState.current = GameState::VS_PLAYING;
 	PlaySound(audio.start);
 }

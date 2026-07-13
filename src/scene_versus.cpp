@@ -133,7 +133,8 @@ void FlappyGame::CheckVersusBird(Bird& targetBird, bool& isAlive, int& targetSco
 void FlappyGame::DrawVersusBird(Bird& targetBird, SkinIndex skinIndex, bool isAlive,
 	Color tint, const char* statusText, float targetShieldTime)
 {
-	Texture2D texture = resources.skins[EnumIndex(skinIndex)].frames[static_cast<int>(BirdFrame::MID_FLAP)];
+	// use the shared animated frame cycle so both versus birds flap in step with the singleplayer bird
+	Texture2D texture = resources.skins[EnumIndex(skinIndex)].frames[static_cast<int>(resources.birdFrameOrder[resources.birdFrameStep])];
 	const float width = texture.width * BirdScale;
 	const float height = texture.height * BirdScale;
 	if (isAlive && targetShieldTime > 0.0f)
@@ -173,8 +174,10 @@ void FlappyGame::UpdateVersus(const Theme& currentTheme, float frameScale)
 	singlePlayer.slowFactor += (slowTarget - singlePlayer.slowFactor) * std::min(1.0f, deltaTime * 3.0f);   // ease the warp factor
 	world.speed *= singlePlayer.slowFactor;
 
-	const bool player1Flap = IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_W) || IsKeyPressed(storage.save.keyFlapP1);
-	const bool player2Flap = IsKeyPressed(KEY_UP) || IsKeyPressed(storage.save.keyFlapP2);
+	// BindPressed handles the MOUSE_LEFT_BIND sentinel, so either flap key can be bound to the left mouse button.
+	// during active play there are no on-screen buttons, so a click only flaps; menu/pause screens gate their own input
+	const bool player1Flap = IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_W) || BindPressed(storage.save.keyFlapP1);
+	const bool player2Flap = IsKeyPressed(KEY_UP) || BindPressed(storage.save.keyFlapP2);
 	if (versus.started && (versus.alive1 || versus.alive2) &&
 		(IsKeyPressed(storage.save.keyPause) || IsKeyPressed(KEY_ESCAPE)))
 		versus.paused = !versus.paused;
@@ -322,11 +325,35 @@ void FlappyGame::UpdateVersus(const Theme& currentTheme, float frameScale)
 			world.topPipes[i].pickupCollected = true;
 		}
 	}
+	// both out = match over. record one decisive result (non-draw) toward the Versus-cosmetic unlock, once per match
+	if (!versus.alive1 && !versus.alive2 && !versus.resultRecorded)
+	{
+		versus.resultRecorded = true;
+		if (versus.score1 != versus.score2)
+		{
+			storage.save.versusWins++;
+			RefreshUnlocks();   // may flip the Versus cosmetic from locked to unlocked
+			WriteSave(storage.save, storage.savePath);
+		}
+	}
 	if (!versus.alive1 && !versus.alive2 && IsKeyPressed(KEY_ENTER)) StartVersus();   // both out: Enter rematches
 }
 
 void FlappyGame::DrawVersusScene(const Theme& currentTheme, Vector2 virtualMouse)
 {
+	// tick the shared bird flap-cycle timer so 2P birds animate. singleplayer advances the same fields in its own
+	// draw path; this branch runs only in VS_PLAYING so the two paths never fight over the timer
+	if (interfaceState.current == GameState::VS_PLAYING && (versus.alive1 || versus.alive2))
+	{
+		if (resources.flapBoost > 0.0f) resources.flapBoost -= deltaTime;
+		float frameDur = (resources.flapBoost > 0.0f) ? 0.04f : 0.09f;
+		resources.birdAnimationTimer += deltaTime;
+		if (resources.birdAnimationTimer >= frameDur)
+		{
+			resources.birdAnimationTimer = 0.0f;
+			resources.birdFrameStep = (resources.birdFrameStep + 1) % 4;
+		}
+	}
 
 	// night fade driven by the leading score (same crossfade as single-player)
 	int vsLeadScore = (versus.score1 > versus.score2) ? versus.score1 : versus.score2;
@@ -343,6 +370,9 @@ void FlappyGame::DrawVersusScene(const Theme& currentTheme, Vector2 virtualMouse
 	DaynightShaderHandle dnHandle = MakeDaynightHandle();
 	// versus advances skyScroll unwrapped, so it doubles as the moon scroll (no jump on bg wrap)
 	DrawThemeSky(currentTheme, resources.ui, world.skyScroll, world.midScroll, world.nightAmount, world.skyScroll, 0.0f, &dnHandle);
+	DrawAmbientFlyers(ambientFlyers, currentTheme);   // sky ambiance, behind the pipes/birds
+	// pipe textures (incl. the Versus two-tone) are baked into currentTheme.pipe / .pipe180 by ApplySelectedPipes,
+	// so every mode renders the same selection with no per-mode override here
 	int topPipeOff = 266 - currentTheme.pipe.height;
 	for (int i = 0; i < Constants::Pipes::Count; i++)
 	{

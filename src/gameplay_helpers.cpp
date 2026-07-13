@@ -36,8 +36,15 @@ float Randf(float a, float b)
 	return a + (b - a) * (GetRandomValue(0, 10000) / 10000.0f);
 }
 
+bool BindPressed(int bind)
+{
+	if (bind == MOUSE_LEFT_BIND) return IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+	return IsKeyPressed(bind);
+}
+
 const char* KeyName(int k)
 {
+	if (k == MOUSE_LEFT_BIND) return "Mouse L";
 	switch (k)
 	{
 		case KEY_SPACE: return "Space";
@@ -103,7 +110,7 @@ void FlappyGame::RollPipeExtras(int i, int score)
 	pipe.oscPhase = Randf(0.0f, 6.2832f);   // random start phase so oscillating pipes aren't all in lockstep
 	pipe.pickup = PickupType::NONE;
 	pipe.pickupCollected = false;
-	if (singlePlayer.dailyMode || singlePlayer.endlessMode) return;   // those modes stay plain, no twists or pickups
+	if (singlePlayer.endlessMode) return;   // Classic stays plain, no twists or pickups. Daily matches Normal (same-seed = everyone plays the identical layout with the same pickups)
 
 	// tutorial sandbox forces only the effect being demoed, nothing random
 	if (interfaceState.sandboxEffect != SandboxEffect::NONE)

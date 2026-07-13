@@ -73,6 +73,15 @@ void FlappyGame::PrepareFrame()
 	// keep only the active theme's heavy bg/mid textures resident; runs before any backdrop draw (which is in Draw)
 	UpdateActiveThemeVisuals();
 
+	// ambient sky flyers drift across every state that shows the theme sky; update once here, drawn by each scene's backdrop
+	{
+		const int themeIdx = EnumIndex(storage.save.themeIndex);
+		const bool valid = themeIdx >= 0 && themeIdx < (int)resources.themes.size();
+		const int flyerCount = valid ? resources.themes[themeIdx].flyerCount : 0;
+		const bool aircraft = valid && resources.themes[themeIdx].flyerAircraft;
+		UpdateAmbientFlyers(ambientFlyers, themeIdx, flyerCount, aircraft, storage.save.reduceMotion, deltaTime);
+	}
+
 	// drive the menu fade: dip to black, swap state at the midpoint, and swallow mouse input so nothing is clicked mid-fade
 	StateTransitionTracker& transition = interfaceState.transition;
 	if (transition.active)
@@ -132,8 +141,11 @@ void FlappyGame::ProcessInput()
 		}
 	}
 
-	// esc / pause-key toggles pause while playing
-	if (interfaceState.current == GameState::PLAYING && (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(storage.save.keyPause)))
+	// esc / pause-key toggles pause while playing; alt-tab (window loses focus) auto-pauses so the player isn't dying
+	// off-screen while they're in another window
+	if (interfaceState.current == GameState::PLAYING && !IsWindowFocused())
+		interfaceState.current = GameState::PAUSED;
+	else if (interfaceState.current == GameState::PLAYING && (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(storage.save.keyPause)))
 		interfaceState.current = GameState::PAUSED;
 	else if (interfaceState.current == GameState::PAUSED && !interfaceState.pauseConfirm && (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(storage.save.keyPause) || IsKeyPressed(KEY_ENTER)))
 		interfaceState.current = GameState::PLAYING;
@@ -263,6 +275,7 @@ void FlappyGame::Draw()
 	{
 		DaynightShaderHandle dnHandle = MakeDaynightHandle();
 		TickAndDrawMenuBackdrop(currentTheme, resources.ui, world.skyScroll, world.midScroll, world.baseScroll, world.nightAmount, BaseTop, frame.scale, &dnHandle);
+		DrawAmbientFlyers(ambientFlyers, currentTheme);   // over the sky; sub-menu scrim below dims them along with the backdrop
 		if (state != GameState::MENU)
 		{
 			// behind-content scrim for sub-menus: keeps the title/back chrome visible against the sky while making dense panels readable
@@ -290,11 +303,10 @@ void FlappyGame::Draw()
 			case MainMenuAction::CancelExit:   mainMenu.exitConfirm = false; break;
 			case MainMenuAction::StartNormal:  StartNormal(); break;
 			case MainMenuAction::StartDaily:   StartDaily(); break;
-			case MainMenuAction::DailyAlreadyDone: ShowToast("Daily done - score " + std::to_string(storage.save.lastDailyScore)); break;
 			case MainMenuAction::OpenCustomize: interfaceState.customize.pageScroll = 0.0f; GoToState(GameState::CUSTOMIZE); break;
 			case MainMenuAction::OpenVsMenu:   GoToState(GameState::VS_MENU); break;
 			case MainMenuAction::StartEndless: StartEndless(); break;
-			case MainMenuAction::OpenLeaderboard: interfaceState.leaderboardDaily = false; FetchLeaderboard(); GoToState(GameState::LEADERBOARD); break;
+			case MainMenuAction::OpenLeaderboard: FetchLeaderboard(); GoToState(GameState::LEADERBOARD); break;
 			case MainMenuAction::OpenTrophies:  GoToState(GameState::TROPHIES); break;
 			case MainMenuAction::OpenAchievements: GoToState(GameState::ACHIEVEMENTS); break;
 			case MainMenuAction::OpenStats:     GoToState(GameState::STATS); break;
@@ -304,7 +316,7 @@ void FlappyGame::Draw()
 		break;
 	}
 	case GameState::LEADERBOARD:
-		if (DrawLeaderboardScreen(interfaceState.leaderboardDaily, storage.save, frame.virtualMouse)) GoToState(GameState::MENU);
+		if (DrawLeaderboardScreen(frame.virtualMouse)) GoToState(GameState::MENU);
 		break;
 	case GameState::CREDITS:
 		if (DrawCreditsScreen(frame.virtualMouse)) GoToState(GameState::MENU);
@@ -315,7 +327,11 @@ void FlappyGame::Draw()
 	case GameState::CUSTOMIZE:
 	{
 		CustomizeScreenResult customizeResult = DrawCustomizeScreen(interfaceState.customize, storage.save, resources.skins, resources.themes, resources.pipeTextures, frame.virtualMouse, deltaTime);
-		if (customizeResult.birdChoiceChanged) interfaceState.twoPlayerButtonNeedsRefresh = true;   // rebake next frame (see PrepareFrame)
+		if (customizeResult.birdChoiceChanged)
+		{
+			interfaceState.twoPlayerButtonNeedsRefresh = true;   // rebake next frame (see PrepareFrame)
+			if (storage.save.versusPipes) ApplySelectedPipes();  // the Versus two-tone is keyed to the bird colours, so a bird swap must re-bake the pipes
+		}
 		if (customizeResult.pipeChoiceChanged) ApplySelectedPipes();
 		if (customizeResult.backClicked) { WriteSave(storage.save, storage.savePath); GoToState(GameState::MENU); }
 		break;
@@ -359,10 +375,12 @@ void FlappyGame::Draw()
 
 	if (state == GameState::PAUSED)
 	{
-		int pauseBest = singlePlayer.dailyMode ? storage.save.bestDailyScore
+		// pause menu shows the "beat this" target for the current mode. daily = TODAY's best (the nearby target on this
+		// seed); other modes = all-time. mirrors the run-end panel and MaybeCelebratePersonalBest
+		int pauseBest = singlePlayer.dailyMode ? storage.save.bestDailyTodayScore
 			: (singlePlayer.endlessMode ? storage.save.bestClassicScore : storage.save.bestScore);
 		PauseMenuAction pauseAction = DrawPauseMenu(interfaceState.pauseConfirm, singlePlayer.score,
-			pauseBest, !singlePlayer.dailyMode, interfaceState.sandboxEffect, frame.virtualMouse);
+			pauseBest, true, interfaceState.sandboxEffect, frame.virtualMouse);
 		switch (pauseAction)
 		{
 			case PauseMenuAction::Resume: interfaceState.current = GameState::PLAYING; break;

@@ -2,6 +2,7 @@
 
 #include "gameplay_helpers.h"
 #include "net.h"
+#include "run_artifacts.h"   // SaveGhostRun: daily writes today + all-time ghost files directly, bypassing FlappyGame::SaveGhost
 
 #include <algorithm>
 #include <cmath>
@@ -82,7 +83,8 @@ void FlappyGame::MaybeCelebratePersonalBest(float x, float y)
 	if (singlePlayer.crossedBest || interfaceState.sandboxEffect != SandboxEffect::NONE)
 		return;
 
-	const int bestForMode = singlePlayer.dailyMode ? storage.save.bestDailyScore
+	// daily uses today's best (matches what the run-end panel + pause menu show); other modes = all-time
+	const int bestForMode = singlePlayer.dailyMode ? storage.save.bestDailyTodayScore
 		: (singlePlayer.endlessMode ? storage.save.bestClassicScore : storage.save.bestScore);
 	// only celebrate against a real prior best — don't fire at score 1 on a fresh save
 	if (bestForMode <= 0 || singlePlayer.score <= bestForMode) return;
@@ -196,9 +198,12 @@ void FlappyGame::UpdateSinglePlayer(const Theme& currentTheme, float frameScale)
 				int finalScore = singlePlayer.savedScore < 0 ? 0 : singlePlayer.savedScore;
 				const bool realRun = interfaceState.sandboxEffect == SandboxEffect::NONE;
 				const bool normalRun = realRun && !singlePlayer.dailyMode && !singlePlayer.endlessMode;
-				int& bestRef = singlePlayer.dailyMode ? storage.save.bestDailyScore
+				// "current best for this mode" is what the NEW badge chases and what the panel shows. daily uses TODAY's
+				// best so that infinite retries have a nearby, meaningful target — chasing the all-time daily record
+				// (from a different seed) would make every retry feel like a failure
+				const int currentBest = singlePlayer.dailyMode ? storage.save.bestDailyTodayScore
 					: (singlePlayer.endlessMode ? storage.save.bestClassicScore : storage.save.bestScore);
-				singlePlayer.newBest = realRun && finalScore > bestRef;
+				singlePlayer.newBest = realRun && finalScore > currentBest;
 				singlePlayer.medalRank = MedalRank::NONE;
 				for (std::size_t m = 0; normalRun && m < Constants::Medals::Count; m++)
 				{
@@ -208,18 +213,35 @@ void FlappyGame::UpdateSinglePlayer(const Theme& currentTheme, float frameScale)
 				{
 					if (singlePlayer.newBest)
 					{
-						bestRef = finalScore;
-						SaveGhost(finalScore);   // the new best run becomes the ghost to race next time
+						if (singlePlayer.dailyMode)
+						{
+							// today's best always updates (that's what newBest means for daily); write today's ghost
+							storage.save.bestDailyTodayScore = finalScore;
+							SaveGhostRun(storage.dailyTodayGhostPath, ghost.recordedFlaps, storage.save, finalScore);
+							// all-time record only bumps if this attempt actually beats it; keep its ghost too
+							if (finalScore > storage.save.bestDailyScore)
+							{
+								storage.save.bestDailyScore = finalScore;
+								SaveGhostRun(storage.dailyGhostPath, ghost.recordedFlaps, storage.save, finalScore);
+							}
+						}
+						else
+						{
+							int& bestRef = singlePlayer.endlessMode ? storage.save.bestClassicScore : storage.save.bestScore;
+							bestRef = finalScore;
+							SaveGhost(finalScore);   // the new best run becomes the ghost to race next time
+						}
 					}
 					// lifetime death stats (per-skin uses bit 0 of the skin index as a cheap 2-bucket key)
 					storage.save.totalDeaths++;
 					storage.save.deathsPerSkin[EnumValue(storage.save.skinIndex) & 1]++;
-					// daily challenge: lock out further attempts today
+					// daily challenge: track last score + bump the per-day counter (only once per calendar day, no matter
+					// how many retries — DailyDevotee is "finish 7 daily challenges", not "die 7 times in the daily")
 					if (singlePlayer.dailyMode)
 					{
+						const bool firstAttemptToday = storage.save.lastDailyDate != TodayYMD();
 						storage.save.lastDailyDate = TodayYMD();
-						storage.save.lastDailyScore = finalScore;
-						storage.save.dailyCount++;
+						if (firstAttemptToday) storage.save.dailyCount++;
 					}
 					RefreshUnlocks();
 					// achievement checks against the freshly-updated stats
@@ -234,7 +256,15 @@ void FlappyGame::UpdateSinglePlayer(const Theme& currentTheme, float frameScale)
 					if (storage.save.dailyCount >= 7)            UnlockAchievement(Achievement::DailyDevotee);
 					// High Roller: pure Normal-mode milestone (no Classic / Daily, where the difficulty curve is different)
 					if (finalScore >= 100 && !singlePlayer.dailyMode && !singlePlayer.endlessMode) UnlockAchievement(Achievement::HighRoller);
-					if (storage.save.deathsPerSkin[0] >= 10 && storage.save.deathsPerSkin[1] >= 10) UnlockAchievement(Achievement::StyleSwitch);
+					// Completionist: own the three hardest cosmetics — Ruby medal, Rainbow bird, Rainbow pipe. RefreshUnlocks
+					// ran just above, so the unlock masks + bestScore reflect this run. all three ultimately gate on
+					// bestScore, but check the actual flags so this stays correct if the unlock curve ever changes
+					{
+						const bool hasRuby = storage.save.bestScore >= Constants::Medals::Thresholds[Constants::Medals::Count - 1];
+						const bool hasRainbowBird = (storage.save.unlockedSkins >> EnumValue(SkinIndex::RAINBOW_BIRD)) & 1ull;
+						const bool hasRainbowPipe = storage.save.bestScore >= Constants::Customization::PipeColorRequirements[EnumValue(PipeColorIndex::RAINBOW_PIPE)];
+						if (hasRuby && hasRainbowBird && hasRainbowPipe) UnlockAchievement(Achievement::Completionist);
+					}
 					WriteSave(storage.save, storage.savePath);
 					if (!singlePlayer.scoreSubmitted && singlePlayer.savedScore >= 0)
 					{
@@ -260,8 +290,8 @@ void FlappyGame::UpdateSinglePlayer(const Theme& currentTheme, float frameScale)
 				if (singlePlayer.panelSlide > 1.0f) singlePlayer.panelSlide = 1.0f;
 			}
 
-			// after the panel lands, Enter mirrors Try Again for replayable modes
-			if (singlePlayer.panelSlide >= 1.0f && IsKeyPressed(KEY_ENTER) && !singlePlayer.dailyMode)
+			// after the panel lands, Enter mirrors the Try Again button (daily is now replayable too)
+			if (singlePlayer.panelSlide >= 1.0f && IsKeyPressed(KEY_ENTER))
 				RestartCurrentRun();
 		}
 
@@ -276,9 +306,10 @@ void FlappyGame::UpdateSinglePlayer(const Theme& currentTheme, float frameScale)
 				if (singlePlayer.slowTime <= 0.0f) singlePlayer.timeWarpDir = 0;
 			}
 		}
-		// world speed ramps with the score (flat in daily/classic); the time warp bends it
+		// world speed ramps with the score (flat only in Classic; Daily matches Normal so the same seed lands the same
+		// pipe positions everywhere). the time warp bends it
 		world.speed = singlePlayer.alive
-			? CurrentSpeed(singlePlayer.score, !singlePlayer.dailyMode && !singlePlayer.endlessMode)
+			? CurrentSpeed(singlePlayer.score, !singlePlayer.endlessMode)
 			: Constants::Pipes::ScrollSpeed;
 		float slowTarget = singlePlayer.slowTime > 0.0f
 				? (singlePlayer.timeWarpDir > 0 ? Constants::Pickups::SpeedFactor : Constants::Pickups::SlowFactor)
@@ -415,7 +446,7 @@ void FlappyGame::UpdateSinglePlayer(const Theme& currentTheme, float frameScale)
 				// shift the top pipe by a fresh random amount, then place the bottom a dynamic gap below it (gap narrows as the score climbs)
 				singlePlayer.offset = world.topPipes[i].Random();
 				world.topPipes[i].y = world.topPipes[i].defaultY + singlePlayer.offset;
-				float gap = CurrentGap(singlePlayer.score, !singlePlayer.dailyMode && !singlePlayer.endlessMode);
+				float gap = CurrentGap(singlePlayer.score, !singlePlayer.endlessMode);
 				world.bottomPipes[i].y = world.topPipes[i].y + 266.0f + gap;
 				world.topPipes[i].baseY = world.topPipes[i].y;
 				world.bottomPipes[i].baseY = world.bottomPipes[i].y;

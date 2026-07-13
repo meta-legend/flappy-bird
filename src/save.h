@@ -96,20 +96,19 @@ constexpr bool EnumInRange(Enum value, std::size_t count) noexcept
 
 struct SaveData
 {
-	// version of save.bin we LOADED from; WriteSave always stamps the latest format.
-	// 0 means "never loaded" — after a successful LoadSave it equals the on-disk file version
-	int version = 0;
 	// identity
 	std::string playerName;
 	int bestScore = 0;
 	int bestClassicScore = 0;   // separate high score for Classic (the no-ramp, no-powerups mode)
-	int bestDailyScore = 0;     // separate high score for Daily Challenge runs
+	int bestDailyScore = 0;     // all-time daily record; the shared-seed nature of daily makes this a "luckiest seed I ever drew" number more than a skill signal, so it's a stats-screen brag rather than the in-run target
+	int bestDailyTodayScore = 0;   // best score on TODAY's daily seed only; drives the "beat this" target while retrying today. resets each new day (guarded by lastDailyDate); stale value is ignored via TodayYMD() check on read
 	// customize
 	ThemeIndex themeIndex = ThemeIndex::CLASSIC;
 	SkinIndex skinIndex = SkinIndex::YELLOW_BIRD;
 	SkinIndex skinIndex2 = SkinIndex::ORANGE_BIRD;   // player two's bird in 2-player
 	PipeStyleIndex pipeStyleIndex = PipeStyleIndex::CLASSIC;
 	PipeColorIndex pipeColorIndex = PipeColorIndex::GREEN_PIPE;
+	bool versusPipes = false;   // cosmetic (2P only): colour the top pipe by P1's bird, the bottom by P2's; overrides pipeColorIndex in versus
 	unsigned long long unlockedSkins = 3;   // bitmask, one bit per SkinIndex (defaults: yellow + orange)
 	unsigned long long unlockedThemes = 1;  // bitmask, one bit per ThemeIndex (defaults: classic only)
 	// audio (0..100)
@@ -146,9 +145,10 @@ struct SaveData
 	// achievements
 	unsigned long long achMask = 0;   // bitmask, one bit per achievement
 	// daily challenge
-	int lastDailyDate = 0;   // YYYYMMDD of the last daily played (gates one run per day)
-	int lastDailyScore = 0;
-	int dailyCount = 0;
+	int lastDailyDate = 0;   // YYYYMMDD of the last daily played today (used to reset bestDailyTodayScore across days + gate dailyCount to one bump/day)
+	int dailyCount = 0;      // count of DISTINCT days you've completed the daily (DailyDevotee target); infinite retries within a day only bump once
+	// 2-player
+	int versusWins = 0;      // decisive 2P matches completed (non-draw); gates the Versus pipe cosmetic
 };
 
 // load save.bin; false if the file is missing OR the checksum is bad (caller treats both as "no save" and keeps defaults)

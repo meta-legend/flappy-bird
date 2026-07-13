@@ -9,8 +9,13 @@
 static constexpr int VIRTUAL_W = 1067;
 static constexpr int VIRTUAL_H = 600;
 
-// render target is VIRTUAL_* x this, then bilinear-downscaled to the window; there is cheap anti-aliasing on the scaled result
-static constexpr int RENDER_SUPERSAMPLE = 4;
+// render target is VIRTUAL_* x this, then bilinear-downscaled to the window; there is cheap anti-aliasing on the scaled
+// result. 3x balances scroll smoothness against VRAM/fill: the target is ~9/16 the pixels of the original 4x
+static constexpr int RENDER_SUPERSAMPLE = 3;
+
+// keybind sentinel for "left mouse button". chosen above every raylib key code (which top out ~348) so it survives
+// the save's key-range clamp and never collides with a real key. BindPressed() maps it to IsMouseButtonPressed(LEFT)
+static constexpr int MOUSE_LEFT_BIND = 1000;
 
 // every screen/mode the game can occupy; drives the top-level state machine
 enum class GameState {
@@ -95,6 +100,9 @@ struct Theme
 	Texture2D mid, midNight;   // bottom skyline band; the near parallax layer
 	Texture2D pipe, pipe180;   // 88x440 bottom pipe (cap up) and its flipped top counterpart
 	Texture2D base;            // horizontally tileable ground strip, drawn at baseTop
+	Texture2D flyer[2][2] = {};  // ambient sky flyers: [species][frame]. up to 2 species (e.g. skyline = jet + helicopter)
+	int flyerCount = 0;          // number of flyer species (0 = none, e.g. Classic)
+	bool flyerAircraft = false;  // true = aircraft (single, fixed altitude); false = birds (loose flocks, scattered)
 	const char* name;
 	Vector3 duskTint = { 1.0f, 0.85f, 0.7f }; // tint multiplier at the day/night crossfade peak
 	// does this theme draw a near parallax band (mid) over the far bg? Skyline/Sunset/Canyon/Meadow do.
@@ -107,7 +115,8 @@ struct Theme
 	bool isClassic = false;       // Classic loads raw images; pack themes bake from the art pack
 	std::string dayPath, nightPath;        // background sources
 	std::string dayNearPath, nightNearPath;// near/mid sources (pack themes with hasMid)
-	bool visualsLoaded = false;   // whether bg/bgNight/mid/midNight have been baked yet
+	std::string basePath;         // ground strip source; base is baked lazily alongside bg/mid (only the active theme's is resident)
+	bool visualsLoaded = false;   // whether bg/bgNight/mid/midNight/base have been baked yet
 	Texture2D dayThumb{}, nightThumb{};    // small previews for the Customize theme picker
 };
 

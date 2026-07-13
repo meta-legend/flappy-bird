@@ -1,6 +1,5 @@
 #include "screen_main_menu.h"
 #include "assets.h"
-#include "gameplay_helpers.h"
 #include "render_game.h"
 #include "save.h"
 #include "system_display.h"
@@ -31,6 +30,7 @@ MainMenuAction DrawMainMenuScreen(
 	// backdrop params are unused here — kept in the signature for call-site compatibility
 	(void)frameScale; (void)skyScroll; (void)midScroll; (void)baseScroll;
 	(void)nightAmount; (void)baseTop;
+	(void)sd;   // kept in the signature for future signals (daily streak counter, unread indicator, etc.)
 
 	// while the exit dialog is up, park the cursor far off-screen so none of the menu buttons behind it can be
 	// hovered/clicked; it's restored to the real position for the dialog's own buttons below
@@ -106,9 +106,9 @@ MainMenuAction DrawMainMenuScreen(
 		float dailyCX = customizeCX - (sideH + smallH) * 0.5f - outerGap;
 		float endlessCX = twoPlayerCX + (sideH + smallH) * 0.5f + outerGap;
 
-		// daily tile reports DailyAlreadyDone instead of StartDaily when today's run was already played
+		// daily now allows infinite retries against the same seed for the day; no more one-and-done gate
 		if (UiTextureButton(menuButtons.daily.texture, vmouse, dailyCX, trioCY, smallH))
-			setAction(sd.lastDailyDate == TodayYMD() ? MainMenuAction::DailyAlreadyDone : MainMenuAction::StartDaily);
+			setAction(MainMenuAction::StartDaily);
 		if (UiTextureButton(menuButtons.customize.texture, vmouse, customizeCX, trioCY, sideH)) setAction(MainMenuAction::OpenCustomize);
 		if (UiTextureButton(menuButtons.twoPlayer.texture, vmouse, twoPlayerCX, trioCY, sideH)) setAction(MainMenuAction::OpenVsMenu);
 		if (UiTextureButton(menuButtons.classic.texture, vmouse, endlessCX, trioCY, smallH)) setAction(MainMenuAction::StartEndless);

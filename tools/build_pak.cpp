@@ -4,7 +4,7 @@
 // usage:
 //   build_pak <resources_dir> <output_pak> [--xor]
 
-#include "networkml.h"
+#include "fileml.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -52,29 +52,6 @@ namespace
 		std::string absolutePath;   // where to read the bytes from
 	};
 
-	// ML::File::listFiles returns basenames only and is non-recursive, so we walk subfolders ourselves. TOC + runtime
-	// lookup paths all use forward slashes regardless of platform
-	void WalkDirectory(ML::File& fm, const std::string& root,
-		const std::string& subPath, std::vector<PackedFile>& out)
-	{
-		const std::string folder = root + "/" + subPath;
-		if (!fm.isDirectory(folder)) return;
-		const std::vector<std::string> entries = fm.listFiles(folder);
-		for (const auto& name : entries)
-		{
-			const std::string fullPath = folder + "/" + name;
-			const std::string relPath = subPath + "/" + name;
-			if (fm.isDirectory(fullPath))
-			{
-				WalkDirectory(fm, root, relPath, out);
-			}
-			else if (fm.isFile(fullPath))
-			{
-				out.push_back({ relPath, fullPath });
-			}
-		}
-	}
-
 	// append value's raw bytes (the shipping platforms are all little-endian, matching how the reader memcpy's them back)
 	template <typename T>
 	void AppendLE(std::vector<unsigned char>& buf, T value)
@@ -99,11 +76,19 @@ namespace
 			return 1;
 		}
 
-		// recursively gather every file under each packed subdir
+		// recursively gather every file under each packed subdir. listFilesRecursive
+		// returns paths relative to the subdir (forward-slashed); we prefix the subdir
+		// name so TOC keys match what the runtime loader looks up (e.g.
+		// "images/birds/downflap.png").
 		std::vector<PackedFile> files;
 		for (const auto& sub : PACK_SUBDIRS)
 		{
-			WalkDirectory(fm, resourcesDir, sub, files);
+			const std::string subRoot = resourcesDir + "/" + sub;
+			if (!fm.isDirectory(subRoot)) continue;   // an optional subdir is simply absent
+			for (const auto& rel : fm.listFilesRecursive(subRoot))
+			{
+				files.push_back({ sub + "/" + rel, subRoot + "/" + rel });
+			}
 		}
 		if (files.empty())
 		{

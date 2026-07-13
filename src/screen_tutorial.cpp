@@ -123,11 +123,11 @@ TutorialScreenResult DrawTutorialScreen(
 		float osc = sinf((float)GetTime() * 2.5f) * 14.0f;
 		const bool fillCrop = FillModeBottomCrop() > 0.0f;
 		const bool borderless = sd.resIndex == ResIndex::BORDERLESS;
-		float ps = fillCrop ? 0.44f : (borderless ? 0.52f : 0.38f);
+		float ps = fillCrop ? 0.36f : (borderless ? 0.52f : 0.38f);   // windowed-maximized shrinks so the pair clears the cropped bottom
 		float srcH = 120.0f;
 		float pw = curTheme.pipe.width * ps;
 		float ph = srcH * ps;
-		float gapY = py + (fillCrop ? 62.0f : (borderless ? 86.0f : 70.0f)) + osc;
+		float gapY = py + (fillCrop ? 48.0f : (borderless ? 70.0f : 70.0f)) + osc;   // windowed-maximized + borderless both sit higher
 		float gapH = 70.0f;
 		Rectangle srcTop = { 0, (float)(curTheme.pipe.height - (int)srcH), (float)curTheme.pipe.width, srcH };   // crop the cap end of the texture
 		Rectangle dstTop = { pcx - pw / 2.0f, gapY - gapH / 2 - ph, pw, ph };

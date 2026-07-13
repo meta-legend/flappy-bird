@@ -24,6 +24,10 @@ find_package(nlohmann_json CONFIG REQUIRED)
 # Its package config pulls in libcurl transitively (nlohmann_json is compiled in)
 find_package(NetworkML CONFIG REQUIRED)
 
+# ML::File moved to the separate File ML library (file-ml). It comes from the
+# same vcpkg registry and has no external dependencies.
+find_package(FileML CONFIG REQUIRED)
+
 # expose the project version to C++ so the Info screen can show it without a
 # hardcoded duplicate. (`-DFLAPPY_VERSION=...`)
 add_compile_definitions(FLAPPY_VERSION="${PROJECT_VERSION}")
@@ -33,6 +37,7 @@ add_executable(Flappy_Bird
     src/main.cpp
     src/game.cpp
     src/game_lifecycle.cpp
+    src/ambient_flyers.cpp
     src/assets.cpp
     src/gameplay_helpers.cpp
     src/particles.cpp
@@ -55,7 +60,7 @@ add_executable(Flappy_Bird
     src/net.cpp
     src/pak_archive.cpp
     src/hmac_sha256.cpp)
-target_link_libraries(Flappy_Bird PRIVATE raylib glfw NetworkML::networkml nlohmann_json::nlohmann_json)
+target_link_libraries(Flappy_Bird PRIVATE raylib glfw NetworkML::networkml FileML::fileml nlohmann_json::nlohmann_json)
 
 # Final shipped name is "Flappy Bird" (with a space). The CMake target stays
 # Flappy_Bird so every reference below keeps working; only the output file is renamed.
@@ -136,9 +141,8 @@ option(PAK_XOR "Obfuscate the pak data section with XOR (not real encryption)" O
 # build_pak is a tiny CLI tool that walks src/resources and writes data.pak.
 add_executable(build_pak tools/build_pak.cpp)
 set_target_properties(build_pak PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
-# Uses ML::File for directory walks + binary I/O — same library the game uses,
-# so we don't drag in any extra deps beyond what's already configured.
-target_link_libraries(build_pak PRIVATE NetworkML::networkml)
+# Uses ML::File for directory walks + binary I/O, which now lives in File ML.
+target_link_libraries(build_pak PRIVATE FileML::fileml)
 
 if(PAK_PACK)
     set(_PAK_XOR_ARG "")

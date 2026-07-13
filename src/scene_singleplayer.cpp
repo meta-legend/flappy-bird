@@ -30,6 +30,7 @@ void FlappyGame::DrawSinglePlayerScene(const Theme& currentTheme, Vector2 virtua
 	DaynightShaderHandle dnHandle = MakeDaynightHandle();
 	DrawThemeSky(currentTheme, resources.ui, singlePlayer.scroll.renderedSkyScroll,
 		singlePlayer.scroll.renderedMidScroll, world.nightAmount, world.moonScroll, cy, &dnHandle);
+	DrawAmbientFlyers(ambientFlyers, currentTheme);   // sky ambiance, behind the pipes/bird
 
 	// --- pipes, plus per-pipe wind / portal / pickup overlays ---
 	int topPipeOff = 266 - currentTheme.pipe.height;   // a shorter pipe texture is pushed up so its cap aligns to the 266 body
@@ -239,8 +240,9 @@ void FlappyGame::DrawSinglePlayerScene(const Theme& currentTheme, Vector2 virtua
 			float smallScale = 3.0f;
 			float valRight = px + 104 * S;
 			int currentScore = std::max(0, singlePlayer.savedScore);
-			// each mode keeps its own best, so the panel shows the high score for the mode just played
-			int bestForMode = singlePlayer.dailyMode ? storage.save.bestDailyScore
+			// panel shows the score you're chasing on the next retry. daily = TODAY's best (nearby target on the
+			// current seed); other modes = the all-time best. the all-time daily record lives on the stats screen
+			int bestForMode = singlePlayer.dailyMode ? storage.save.bestDailyTodayScore
 				: (singlePlayer.endlessMode ? storage.save.bestClassicScore : storage.save.bestScore);
 			float curRowCY = py + 16 * S + resources.scoreSmall[0].height * smallScale * 0.5f;
 			float bestRowCY = py + 37 * S + resources.scoreSmall[0].height * smallScale * 0.5f;
@@ -267,12 +269,10 @@ void FlappyGame::DrawSinglePlayerScene(const Theme& currentTheme, Vector2 virtua
 			}
 			else
 			{
-				// daily runs are one-per-day, so they get no "Try Again" — only "Menu"
-				if (!singlePlayer.dailyMode &&
-					UiButton(Rectangle{ VIRTUAL_W / 2 - 175, goBtnY, 165, 44 }, "Try Again", virtualMouse))
+				// daily runs now allow infinite retries — same seed, race your own today's-ghost to climb today's best
+				if (UiButton(Rectangle{ VIRTUAL_W / 2 - 175, goBtnY, 165, 44 }, "Try Again", virtualMouse))
 					RestartCurrentRun();
-				const float menuX = singlePlayer.dailyMode ? VIRTUAL_W / 2 - 82.5f : VIRTUAL_W / 2 + 10.0f;   // center Menu when it's the only button
-				if (UiButton(Rectangle{ menuX, goBtnY, 165, 44 }, "Menu", virtualMouse))
+				if (UiButton(Rectangle{ VIRTUAL_W / 2 + 10, goBtnY, 165, 44 }, "Menu", virtualMouse))
 				{
 					singlePlayer.alive = false;
 					interfaceState.current = GameState::MENU;

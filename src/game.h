@@ -1,11 +1,12 @@
 #pragma once
 
+#include "ambient_flyers.h"
 #include "assets.h"
 #include "system_audio.h"
 #include "constants.h"
 #include "screen_customize.h"
 #include "system_display.h"
-#include "networkml.h"
+#include "fileml.h"
 #include "particles.h"
 #include "render_game.h"
 #include "save.h"
@@ -147,6 +148,7 @@ struct VersusState
 	bool pickup1[Constants::Pipes::Count] = {};
 	bool pickup2[Constants::Pipes::Count] = {};
 	float shieldTime2 = 0.0f;
+	bool resultRecorded = false;   // guards the once-per-match versusWins increment (both-dead state persists for many frames)
 };
 
 // main-menu-only UI: the splash bob, the exit-confirm dialog, and the name-entry overlay; all irrelevant once you leave MENU
@@ -215,7 +217,6 @@ struct InterfaceState
 	TutorialPage tutorialPage = TutorialPage::WELCOME;
 	SandboxEffect sandboxEffect = SandboxEffect::NONE;
 	TutorialPage sandboxReturnPage = TutorialPage::WELCOME;
-	bool leaderboardDaily = false;
 
 	StartupDisplayTracker startupDisplay;
 };
@@ -242,7 +243,8 @@ struct StorageState
 	std::string screenshotDirectory;
 	std::string ghostPath;
 	std::string classicGhostPath;
-	std::string dailyGhostPath;
+	std::string dailyGhostPath;        // all-time daily record ghost (fallback when you haven't tried today yet)
+	std::string dailyTodayGhostPath;   // today's best daily ghost; races against your same-seed self while retrying
 	SaveData save;
 };
 
@@ -386,6 +388,7 @@ private:
 	float deltaTime = 0.0f;
 	std::vector<Particle> particles;
 	ParticleEmitter particleEmitter;
+	AmbientFlyerSystem ambientFlyers;   // background birds/aircraft drifting across the theme sky
 
 	static constexpr float BirdScale = 3.4f;                          // sprite draw scale
 	static constexpr float BirdRadius = Constants::Bird::HitboxRadius;

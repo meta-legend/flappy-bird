@@ -9,7 +9,7 @@ struct SaveData;
 struct Theme;
 struct UiTextures;
 
-// which main-menu button fired this frame; None means nothing was pressed (DailyAlreadyDone = daily run already used today)
+// which main-menu button fired this frame; None means nothing was pressed
 enum class MainMenuAction
 {
 	None,
@@ -19,7 +19,6 @@ enum class MainMenuAction
 	CancelExit,
 	StartNormal,
 	StartDaily,
-	DailyAlreadyDone,
 	OpenCustomize,
 	OpenVsMenu,
 	StartEndless,

@@ -55,6 +55,10 @@ void LoadThemeVisuals(Theme& t)
 {
 	if (t.visualsLoaded) return;   // idempotent: the active theme is ensured every frame, so this must no-op once loaded
 
+	// ground strip: baked here (not at startup) so only the active theme's base is resident. POINT/REPEAT default;
+	// supersampling smooths the scroll. DrawThemeGround tiles it by hand, so wrap mode is irrelevant
+	if (!t.basePath.empty()) t.base = LoadTextureViaPak(t.basePath.c_str());
+
 	Image day;
 	Image night = { 0 };
 	if (t.isClassic)
@@ -113,6 +117,7 @@ void UnloadThemeVisuals(Theme& t)
 	UnloadTexture(t.bgNight);  t.bgNight = Texture2D{};
 	UnloadTexture(t.mid);      t.mid = Texture2D{};
 	UnloadTexture(t.midNight); t.midNight = Texture2D{};
+	if (t.base.id != 0) { UnloadTexture(t.base); t.base = Texture2D{}; }   // ground strip loaded lazily alongside the above
 	t.visualsLoaded = false;
 }
 
@@ -126,7 +131,7 @@ Theme MakeClassicTheme()
 	t.dayPath = "./resources/images/backgrounds/classic_day.png";
 	t.nightPath = "./resources/images/backgrounds/classic_night.png";
 	t.hasMid = true;
-	t.base = LoadTextureViaPak("./resources/images/ground/classic.png");   // POINT/REPEAT default; supersampling smooths the scroll
+	t.basePath = "./resources/images/ground/classic.png";   // baked lazily in LoadThemeVisuals (only the active theme's ground is resident)
 	BakeThemeThumbnails(t);
 	return t;
 }
@@ -143,9 +148,24 @@ Theme BakePackTheme(const char* name, const char* dayPath, const char* nightPath
 	t.dayNearPath = dayNearPath ? dayNearPath : "";
 	t.nightNearPath = nightNearPath ? nightNearPath : "";
 	t.hasMid = hasMid;
-	t.base = LoadTextureViaPak(basePath);   // POINT/REPEAT default; supersampling smooths the scroll
+	t.basePath = basePath ? basePath : "";   // baked lazily in LoadThemeVisuals (only the active theme's ground is resident)
 	BakeThemeThumbnails(t);
 	return t;
+}
+
+void SetThemeFlyers(Theme& t, bool aircraft, const char* n1, const char* n2)
+{
+	t.flyerAircraft = aircraft;
+	t.flyerCount = 0;
+	const char* names[2] = { n1, n2 };
+	for (int s = 0; s < 2 && names[s]; s++)
+	{
+		// tiny 2-frame sprites, so loaded eagerly (not part of the lazy per-theme visuals)
+		std::string base = std::string("./resources/images/flyers/") + names[s];
+		t.flyer[s][0] = LoadTextureViaPak((base + "_0.png").c_str());
+		t.flyer[s][1] = LoadTextureViaPak((base + "_1.png").c_str());
+		if (t.flyer[s][0].id != 0 && t.flyer[s][1].id != 0) t.flyerCount++;
+	}
 }
 
 // procedurally recolor one bird frame into the rainbow skin: a vertical hue gradient (top->bottom sweeps 0..300 deg)
@@ -238,6 +258,13 @@ std::vector<Theme> LoadThemes()
 		"./resources/images/ground/meadow.png", true,
 		"./resources/images/backgrounds/meadow_near_day.png",
 		"./resources/images/backgrounds/meadow_near_night.png"));
+
+	// ambient sky flyers per theme. aircraft (single, fixed altitude) for the city/sunset skies; bird flocks elsewhere.
+	// each species is distinct so no two themes share one. Classic (themes[0]) stays flyer-free
+	SetThemeFlyers(themes[1], true,  "jet", "heli");   // Skyline: airliners + helicopters
+	SetThemeFlyers(themes[2], true,  "prop");          // Sunset: prop planes
+	SetThemeFlyers(themes[3], false, "crow");          // Canyon: crows
+	SetThemeFlyers(themes[4], false, "swallow");       // Meadow: swallows
 
 	// per-theme dusk tints (peak at nightAmount = 0.5 inside the day/night shader): warm orange for arid/golden themes,
 	// cooler purple for the others
@@ -443,14 +470,15 @@ void EnsurePipeLoaded(Texture2D (&pipeTex)[Constants::Customization::PipeStyleCo
 	pipeTex180[style][color] = LoadTextureViaPak((base + "180.png").c_str());
 }
 
-void UnloadPipesExcept(Texture2D (&pipeTex)[Constants::Customization::PipeStyleCount][Constants::Customization::PipeColorCount], Texture2D (&pipeTex180)[Constants::Customization::PipeStyleCount][Constants::Customization::PipeColorCount], int keepStyle, int keepColor)
+void UnloadPipesExcept(Texture2D (&pipeTex)[Constants::Customization::PipeStyleCount][Constants::Customization::PipeColorCount], Texture2D (&pipeTex180)[Constants::Customization::PipeStyleCount][Constants::Customization::PipeColorCount], int keepStyle, int keepColor, int keepColor2)
 {
-	// free every loaded pipe cell except the one the active themes reference (the gameplay pair). cells never loaded
-	// (id == 0) are skipped; the kept cell stays resident so theme.pipe / theme.pipe180 keep pointing at a valid texture
+	// free every loaded pipe cell except the one(s) the active themes reference (the gameplay pair). cells never loaded
+	// (id == 0) are skipped; the kept cell stays resident so theme.pipe / theme.pipe180 keep pointing at a valid texture.
+	// keepColor2 (>= 0) keeps a second cell in the same style — used by the Versus two-tone, which references two colours
 	for (int s = 0; s < (int)Constants::Customization::PipeStyleCount; s++)
 		for (int c = 0; c < (int)Constants::Customization::PipeColorCount; c++)
 		{
-			if (s == keepStyle && c == keepColor) continue;
+			if (s == keepStyle && (c == keepColor || c == keepColor2)) continue;
 			if (pipeTex[s][c].id != 0) { UnloadTexture(pipeTex[s][c]); pipeTex[s][c] = Texture2D{}; }
 			if (pipeTex180[s][c].id != 0) { UnloadTexture(pipeTex180[s][c]); pipeTex180[s][c] = Texture2D{}; }
 		}
@@ -492,9 +520,11 @@ void UnloadThemes(std::vector<Theme>& themes)
 {
 	for (auto& t : themes)
 	{
-		UnloadThemeVisuals(t);   // bg/bgNight/mid/midNight are only resident for the active theme
+		UnloadThemeVisuals(t);   // frees bg/bgNight/mid/midNight/base for the active theme (others were never resident)
 		// t.pipe / t.pipe180 are shared copies owned by the pipe library (assigned by ApplyPipeChoice); it frees them, not us
-		UnloadTexture(t.base);
+		for (int s = 0; s < 2; s++)
+			for (int fr = 0; fr < 2; fr++)
+				if (t.flyer[s][fr].id != 0) UnloadTexture(t.flyer[s][fr]);
 		if (t.dayThumb.id != 0) UnloadTexture(t.dayThumb);
 		if (t.nightThumb.id != 0) UnloadTexture(t.nightThumb);
 	}

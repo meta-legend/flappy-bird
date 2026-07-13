@@ -9,8 +9,8 @@ struct SaveData;
 
 // each Draw*Screen renders one sub-screen and returns true the frame the user asks to go back; vmouse is the virtual-space mouse
 
-// lbDaily toggles the daily vs all-time board; the screen flips it when its tab is clicked
-bool DrawLeaderboardScreen(bool& lbDaily, const SaveData& sd, Vector2 vmouse);
+// single all-time leaderboard for now; daily-scoped board is scrapped until there's a playerbase to fill it
+bool DrawLeaderboardScreen(Vector2 vmouse);
 bool DrawCreditsScreen(Vector2 vmouse);
 // highlights the medal tier earned at bestScore
 bool DrawTrophiesScreen(int bestScore, Texture2D (&medalTextures)[Constants::Medals::Count], Vector2 vmouse);

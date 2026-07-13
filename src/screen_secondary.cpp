@@ -1,7 +1,6 @@
 #include "screen_secondary.h"
 
 #include "constants.h"
-#include "gameplay_helpers.h"
 #include "net.h"
 #include "save.h"
 #include "system_display.h"
@@ -11,32 +10,12 @@
 #include <mutex>
 #include <string>
 
-bool DrawLeaderboardScreen(bool& lbDaily, const SaveData& sd, Vector2 vmouse)
+bool DrawLeaderboardScreen(Vector2 vmouse)
 {
 	DrawText("Leaderboard", VIRTUAL_W / 2 - MeasureText("Leaderboard", 50) / 2, 45, 50, DARKBLUE);
-	if (UiButton(Rectangle{ VIRTUAL_W / 2 - 175, 100, 165, 32 }, "All-Time", vmouse))
-	{
-		if (lbDaily)
-		{
-			lbDaily = false;
-			FetchLeaderboard();   // re-query when switching back to the all-time board
-		}
-	}
-	if (UiButton(Rectangle{ VIRTUAL_W / 2 + 10, 100, 165, 32 }, "Today", vmouse)) lbDaily = true;
-	DrawRectangleLinesEx(Rectangle{ (lbDaily ? VIRTUAL_W / 2 + 10.0f : VIRTUAL_W / 2 - 175.0f), 100, 165, 32 }, 3, GOLD);   // gold outline marks the active tab
 
-	if (lbDaily)
+	// g_lb is filled by the async fetch thread, so read its status + entries under the lock
 	{
-		DrawText("Daily leaderboard coming soon", VIRTUAL_W / 2 - MeasureText("Daily leaderboard coming soon", 24) / 2, 280, 24, RAYWHITE);
-		if (sd.lastDailyDate == TodayYMD())
-		{
-			std::string dailyScore = "Your score today: " + std::to_string(sd.lastDailyScore);
-			DrawText(dailyScore.c_str(), VIRTUAL_W / 2 - MeasureText(dailyScore.c_str(), 22) / 2, 320, 22, SKYBLUE);
-		}
-	}
-	else
-	{
-		// g_lb is filled by the async fetch thread, so read its status + entries under the lock
 		std::lock_guard<std::mutex> lk(g_lb.mtx);
 		if (g_lb.status == LbState::Status::LOADING)
 			DrawText("Loading...", VIRTUAL_W / 2 - MeasureText("Loading...", 28) / 2, 280, 28, RAYWHITE);
@@ -111,7 +90,9 @@ bool DrawStatsScreen(const SaveData& sd, int bestScore, Vector2 vmouse)
 	DrawText("Stats", VIRTUAL_W / 2 - MeasureText("Stats", 50) / 2, 45, 50, DARKBLUE);
 	int hrs = (int)(sd.playtimeSeconds / 3600), mins = ((int)sd.playtimeSeconds % 3600) / 60;
 	// labels[] and vals[] are parallel rows, drawn label-left / value-right
-	const char* labels[9] = { "Normal Best Score", "Classic Best Score", "Daily Best Score", "Games Played", "Total Pipes", "Total Flaps", "Total Deaths", "Daily Wins", "Playtime" };
+	// "Daily Record" (not "Daily Best") to distinguish from the run-end panel's "Best" (which shows TODAY's best under the
+	// infinite-retry rules); the record is the peak across all days and doesn't reset
+	const char* labels[9] = { "Normal Best Score", "Classic Best Score", "Daily Record", "Games Played", "Total Pipes", "Total Flaps", "Total Deaths", "Daily Wins", "Playtime" };
 	std::string vals[9] = {
 		std::to_string(bestScore), std::to_string(sd.bestClassicScore), std::to_string(sd.bestDailyScore),
 		std::to_string(sd.totalGames), std::to_string(sd.totalPipes), std::to_string(sd.totalFlaps), std::to_string(sd.totalDeaths),
@@ -144,7 +125,12 @@ bool DrawAchievementsScreen(const SaveData& sd, Vector2 vmouse)
 		float ay = 112.0f + (i / 2) * 64.0f;
 		DrawRectangleRec(Rectangle{ ax, ay, 330, 56 }, on ? Color{ 30, 60, 40, 255 } : Color{ 35, 35, 35, 255 });
 		DrawText(Constants::Achievements::Names[i], (int)ax + 10, (int)ay + 8, 20, on ? GOLD : GRAY);
-		DrawText(on ? Constants::Achievements::Descriptions[i] : "???", (int)ax + 10, (int)ay + 32, 16, on ? RAYWHITE : DARKGRAY);   // hide the how-to until earned
+		// shrink the description font until it fits the 330-wide tile (with a 10px margin each side), so long
+		// descriptions like Completionist's don't spill past the box edge
+		const char* desc = on ? Constants::Achievements::Descriptions[i] : "???";
+		int descFs = 16;
+		while (descFs > 10 && MeasureText(desc, descFs) > 310) descFs--;
+		DrawText(desc, (int)ax + 10, (int)ay + 32, descFs, on ? RAYWHITE : DARKGRAY);   // hide the how-to until earned
 	}
 	return UiButton(Rectangle{ VIRTUAL_W / 2 - 90, 532.0f - FillModeBottomCrop(), 180, 38 }, "Back", vmouse);
 }
@@ -173,7 +159,7 @@ bool DrawInfoScreen(const std::string& playerName, Vector2 vmouse)
 	DrawText(url, (int)urlRect.x, (int)urlRect.y, 16, urlHover ? SKYBLUE : BLUE);
 	if (urlHover && IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
 		OpenUrl("https://www.youtube.com/channel/UCsLlqLIE-TqDq3lh5kU2PeA");
-	DrawText("Art pack: Megacrash (CC0)", (int)colX + 10, 360, 20, RAYWHITE);
+	DrawText("Art inspiration: Megacrash Pack (CC0)", (int)colX + 10, 360, 20, RAYWHITE);
 	DrawText("Font: PublicPixel", (int)colX + 10, 390, 20, RAYWHITE);
 
 	bool backClicked = UiButton(Rectangle{ VIRTUAL_W / 2 - 90, 530.0f - FillModeBottomCrop(), 180, 40 }, "Back", vmouse);

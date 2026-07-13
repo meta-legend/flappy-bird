@@ -48,15 +48,32 @@ void RestoreWindowedMode(int winW, int winH, bool maximized)
 	if (maximized) MaximizeWindow();
 }
 
+// raylib's ToggleBorderlessWindowed sets FLAG_WINDOW_TOPMOST (GLFW_FLOATING -> HWND_TOPMOST on Windows), which breaks alt-tab
+// // borderless-fullscreen should behave like a normal maximised undecorated window (z-orderable, minimisable), so
+// strip the topmost flag right after entering borderless
+static void ClearBorderlessTopmost()
+{
+	if (IsWindowState(FLAG_WINDOW_TOPMOST)) ClearWindowState(FLAG_WINDOW_TOPMOST);
+}
+
+static void EnterBorderlessMode()
+{
+	ToggleBorderlessWindowed();
+	ClearBorderlessTopmost();
+}
+
 void ApplyStartupDisplayMode(ResIndex mode, int winW, int winH)
 {
 	if (mode == ResIndex::BORDERLESS && IsWindowState(FLAG_BORDERLESS_WINDOWED_MODE))
-		return;   // already where we want to be
+	{
+		ClearBorderlessTopmost();   // in case the flag was applied but topmost wasn't cleared this session
+		return;
+	}
 
 	// settle into a clean windowed baseline at the saved size, then toggle into the persisted target
 	// (only Windowed and Borderless exist now)
 	RestoreWindowedMode(winW, winH);
-	if (mode == ResIndex::BORDERLESS) ToggleBorderlessWindowed();
+	if (mode == ResIndex::BORDERLESS) EnterBorderlessMode();
 }
 
 void ApplyFpsSettings(bool vsync, int fpsCap)
@@ -80,7 +97,8 @@ bool ReconcileStartupDisplay(StartupDisplayTracker& tracker, const SaveData& sav
 
 	tracker.presentedFrames = -1;
 	const bool isBorderless = IsWindowState(FLAG_BORDERLESS_WINDOWED_MODE);
-	if (save.resIndex == ResIndex::BORDERLESS && !isBorderless) ToggleBorderlessWindowed();
+	if (save.resIndex == ResIndex::BORDERLESS && !isBorderless) EnterBorderlessMode();
+	else if (save.resIndex == ResIndex::BORDERLESS && isBorderless) ClearBorderlessTopmost();
 	else if (save.resIndex == ResIndex::WINDOWED)
 	{
 		if (isBorderless) ToggleBorderlessWindowed();
@@ -123,7 +141,7 @@ void ToggleBorderlessMode(SaveData& save)
 	}
 	else
 	{
-		ToggleBorderlessWindowed();
+		EnterBorderlessMode();
 		save.resIndex = ResIndex::BORDERLESS;
 	}
 }

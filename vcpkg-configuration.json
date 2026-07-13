@@ -6,9 +6,9 @@
   "registries": [
     {
       "kind": "git",
-      "repository": "https://github.com/meta-legend/vcpkg-registry",
-      "baseline": "62c3636fd40501ecb92bf94569f81e5d26b7f5af",
-      "packages": [ "network-ml" ]
+      "repository": "https://github.com/meta-legend/meta-legend-vcpkg-registry",
+      "baseline": "993c7d41480c0d61c5e03108fc14f0fbe695335b",
+      "packages": [ "network-ml", "file-ml" ]
     }
   ]
 }

@@ -1,4 +1,6 @@
 #include "save.h"
+#include "types.h"   // MOUSE_LEFT_BIND (keybind sentinel allowed through the flap-key clamp)
+#include "fileml.h"  // ML::File for reading/writing the save file
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -9,10 +11,11 @@
 
 // 4-byte signature, so we can quickly reject other files / earlier formats
 static const char SAVE_MAGIC[4] = { 'F', 'B', 'S', 'V' };
-// current save format. there is no legacy save to migrate from, so the loader rejects anything newer than it
-// knows how to read; bump this whenever the field layout changes. v2 dropped high-contrast, v3 added daily best
-static const int32_t SAVE_VERSION = 3;
-static const int32_t MIN_READABLE_SAVE_VERSION = 2;
+// current save format. only versions in the loader's accept-set carry forward; anything else is rejected like it
+// doesn't exist. bump this whenever the field layout changes, AND add a migration branch so the existing save is
+// preserved. v5 appended versusPipes + versusWins (2-player cosmetic + its unlock counter)
+static const int32_t SAVE_VERSION = 5;
+static const int32_t MIN_READABLE_SAVE_VERSION = 4;   // v4 saves migrate forward (missing v5 fields default to 0/false)
 // FNV-1a is fast + small; XOR-ing the result with a per-build constant means you can't just copy another
 // save.bin's checksum byte-for-byte and graft it on
 static const uint32_t SAVE_SECRET = 0xa9b714f3u;
@@ -102,31 +105,31 @@ void WriteSave(const SaveData& sd, const std::string& path)
 	W64(buf, sd.deathsPerSkin[1]);
 	W64(buf, sd.achMask);
 	W32(buf, sd.lastDailyDate);
-	W32(buf, sd.lastDailyScore);
 	W32(buf, sd.dailyCount);
 	W32(buf, sd.keyPhotoMode);
 	W32(buf, sd.keyRestart);
+	W32(buf, sd.bestDailyTodayScore);
+	W32(buf, sd.versusPipes ? 1 : 0);   // v5
+	W32(buf, sd.versusWins);            // v5   // v4
 
 	std::string body = buf.str();
 	uint32_t hash = Fnv1a((const uint8_t*)body.data(), body.size()) ^ SAVE_SECRET;
 
-	std::ofstream out(path, std::ios::binary | std::ios::trunc);
-	if (!out.is_open()) return;
-	out.write(body.data(), body.size());
-	out.write((char*)&hash, 4);   // checksum trailer
+	// concatenate body + 4-byte checksum trailer and write it in one shot via File ML
+	std::vector<unsigned char> payload(body.begin(), body.end());
+	const auto* hashBytes = reinterpret_cast<const unsigned char*>(&hash);
+	payload.insert(payload.end(), hashBytes, hashBytes + 4);
+	ML::File().writeBytes(path, payload);
 }
 
 bool LoadSave(SaveData& sd, const std::string& path)
 {
-	std::ifstream in(path, std::ios::binary);
-	if (!in.is_open()) return false;
-	in.seekg(0, std::ios::end);
-	std::streamoff sz = in.tellg();
-	if (sz < 12) return false;   // too small to hold magic + version + checksum
-	in.seekg(0);
-	std::vector<char> buf((size_t)sz);
-	in.read(buf.data(), sz);
-	if (!in) return false;
+	// read the whole file via File ML; a missing, empty, or truncated file all fail the
+	// size check below and are treated the same as "no save"
+	std::vector<unsigned char> raw = ML::File().readBytes(path);
+	if (raw.size() < 12) return false;   // too small to hold magic + version + checksum
+	const std::streamoff sz = static_cast<std::streamoff>(raw.size());
+	std::vector<char> buf(raw.begin(), raw.end());
 
 	if (memcmp(buf.data(), SAVE_MAGIC, 4) != 0) return false;
 	size_t bodyLen = (size_t)sz - 4;   // last 4 bytes are the checksum
@@ -145,13 +148,13 @@ bool LoadSave(SaveData& sd, const std::string& path)
 	auto rS = [&](std::string& v) { uint16_t n; memcpy(&n, buf.data() + p, 2); p += 2; v.assign(buf.data() + p, n); p += n; };
 
 	int32_t ver = 0;
-	rI(ver); sd.version = ver;
-	if (ver < MIN_READABLE_SAVE_VERSION || ver > SAVE_VERSION) return false;
+	rI(ver);
+	if (ver < MIN_READABLE_SAVE_VERSION || ver > SAVE_VERSION) return false;   // outside the accept-set = treat as "no save"
 	rS(sd.playerName);
 	sd.playerName = TrimAsciiWhitespace(sd.playerName);
 	rI(sd.bestScore);
 	rI(sd.bestClassicScore);
-	if (ver >= 3) rI(sd.bestDailyScore);   // field added in v3; older files don't have it (migrated below)
+	rI(sd.bestDailyScore);
 	ReadEnum(buf, p, sd.themeIndex);
 	ReadEnum(buf, p, sd.skinIndex);
 	ReadEnum(buf, p, sd.skinIndex2);
@@ -186,11 +189,11 @@ bool LoadSave(SaveData& sd, const std::string& path)
 	rL(sd.deathsPerSkin[1]);
 	rL(sd.achMask);
 	rI(sd.lastDailyDate);
-	rI(sd.lastDailyScore);
 	rI(sd.dailyCount);
-	if (ver < 3) sd.bestDailyScore = sd.lastDailyScore;   // v2 migration: seed the new daily best from the old last-daily
 	rI(sd.keyPhotoMode);
 	rI(sd.keyRestart);
+	rI(sd.bestDailyTodayScore);
+	if (ver >= 5) { rB(sd.versusPipes); rI(sd.versusWins); }   // v5 fields; v4 files leave them at defaults (off / 0)
 	// defensive clamps: the checksum already rejects tampered/truncated files, but a genuine bug could still write an
 	// out-of-range value. counters above ~100M are physically impossible, so zero them rather than show garbage on the
 	// Stats screen, and keep enum/key fields in range so they can't index arrays out of bounds
@@ -207,12 +210,16 @@ bool LoadSave(SaveData& sd, const std::string& path)
 	if (sd.bestScore < 0 || sd.bestScore > 1000000) sd.bestScore = 0;
 	if (sd.bestClassicScore < 0 || sd.bestClassicScore > 1000000) sd.bestClassicScore = 0;
 	if (sd.bestDailyScore < 0 || sd.bestDailyScore > 1000000) sd.bestDailyScore = 0;
+	if (sd.bestDailyTodayScore < 0 || sd.bestDailyTodayScore > 1000000) sd.bestDailyTodayScore = 0;
 	if (sd.dailyCount < 0 || sd.dailyCount > 1000) sd.dailyCount = 0;
+	if (sd.versusWins < 0 || sd.versusWins > 1000000) sd.versusWins = 0;
 	if (!EnumInRange(sd.skinIndex, EnumIndex(SkinIndex::COUNT))) sd.skinIndex = SkinIndex::YELLOW_BIRD;
 	// keybinds: raylib key codes are roughly 32..348; anything outside that or zero is corrupt, so reset to the struct default
 	auto saneKey = [](int k, int def) { return (k < 32 || k > 348) ? def : k; };
-	sd.keyFlapP1 = saneKey(sd.keyFlapP1, KEY_SPACE);
-	sd.keyFlapP2 = saneKey(sd.keyFlapP2, KEY_UP);
+	// flap keys may also hold the MOUSE_LEFT_BIND sentinel (left mouse button), which is intentionally out of key range
+	auto saneFlap = [](int k, int def) { return (k == MOUSE_LEFT_BIND || (k >= 32 && k <= 348)) ? k : def; };
+	sd.keyFlapP1 = saneFlap(sd.keyFlapP1, KEY_SPACE);
+	sd.keyFlapP2 = saneFlap(sd.keyFlapP2, KEY_UP);
 	sd.keyPause  = saneKey(sd.keyPause,  KEY_P);
 	sd.keyPhotoMode = saneKey(sd.keyPhotoMode, KEY_T);
 	sd.keyRestart = saneKey(sd.keyRestart, KEY_R);
@@ -223,7 +230,6 @@ bool LoadSave(SaveData& sd, const std::string& path)
 	if (sd.unlockedThemes == 0) sd.unlockedThemes = 1;
 	// daily date is YYYYMMDD; sane range is roughly 19700101..29991231
 	if (sd.lastDailyDate < 0 || sd.lastDailyDate > 29991231) sd.lastDailyDate = 0;
-	if (sd.lastDailyScore < 0 || sd.lastDailyScore > 1000000) sd.lastDailyScore = 0;
 	// fps cap: 0 (unlimited) or a sane range; anything weird falls back to unlimited
 	if (sd.fpsCap < 0 || sd.fpsCap > 1000) sd.fpsCap = 0;
 	if (sd.ghostOpacity < 0 || sd.ghostOpacity > 100) sd.ghostOpacity = 15;
@@ -240,8 +246,8 @@ bool LoadSave(SaveData& sd, const std::string& path)
 	case ResIndex::BORDERLESS:
 		break;
 	default:
-		// legacy values 1..4 were windowed-size presets, 6 was exclusive fullscreen (removed); any unknown
-		// value sanitizes to windowed rather than leaking an invalid enum into runtime
+		// unknown enum value = write ran a build with an extra mode we don't support. sanitize to windowed rather
+		// than leaking an out-of-range enum into runtime
 		sd.resIndex = ResIndex::WINDOWED;
 		break;
 	}

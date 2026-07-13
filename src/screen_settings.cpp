@@ -18,16 +18,28 @@ void FlappyGame::DrawSettingsScreen(Vector2 virtualMouse){
 	// while waiting to rebind, the next key pressed becomes the new binding (ESC cancels)
 	if (interfaceState.settings.rebindTarget != RebindTarget::NONE)
 	{
+		const RebindTarget target = interfaceState.settings.rebindTarget;
+		const bool flapTarget = target == RebindTarget::PLAYER_ONE_FLAP || target == RebindTarget::PLAYER_TWO_FLAP;
 		int k = GetKeyPressed();
-		if (k != 0)
+		// flap actions may bind the left mouse button (handy as a P2 control). the click that armed this rebind fired on
+		// button RELEASE last frame, so this fresh PRESS can't be that same click. mouse binding is limited to flaps so a
+		// stray click can't clobber Pause/Restart/Photo (whose rows also live on this screen)
+		if (flapTarget && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+		{
+			if (target == RebindTarget::PLAYER_ONE_FLAP) storage.save.keyFlapP1 = MOUSE_LEFT_BIND;
+			else storage.save.keyFlapP2 = MOUSE_LEFT_BIND;
+			interfaceState.settings.rebindTarget = RebindTarget::NONE;
+			interfaceState.settingsDirty = true;
+		}
+		else if (k != 0)
 		{
 			if (k == KEY_ESCAPE) interfaceState.settings.rebindTarget = RebindTarget::NONE;
 			else
 			{
-				if (interfaceState.settings.rebindTarget == RebindTarget::PLAYER_ONE_FLAP) storage.save.keyFlapP1 = k;
-				else if (interfaceState.settings.rebindTarget == RebindTarget::PLAYER_TWO_FLAP) storage.save.keyFlapP2 = k;
-				else if (interfaceState.settings.rebindTarget == RebindTarget::PAUSE) storage.save.keyPause = k;
-				else if (interfaceState.settings.rebindTarget == RebindTarget::RESTART) storage.save.keyRestart = k;
+				if (target == RebindTarget::PLAYER_ONE_FLAP) storage.save.keyFlapP1 = k;
+				else if (target == RebindTarget::PLAYER_TWO_FLAP) storage.save.keyFlapP2 = k;
+				else if (target == RebindTarget::PAUSE) storage.save.keyPause = k;
+				else if (target == RebindTarget::RESTART) storage.save.keyRestart = k;
 				else
 				{
 					storage.save.keyPhotoMode = k;
@@ -76,7 +88,7 @@ void FlappyGame::DrawSettingsScreen(Vector2 virtualMouse){
 	// shared x coords: headings + row labels all align at kLabelX. right-side hints sit further inboard at kHintX
 	// so they don't crowd the scrollbar (trackX=765 in content coords)
 	constexpr int kLabelX = 90;
-	constexpr int kHintX  = 460;
+	constexpr int kHintX  = 438;
 
 	DrawText("Profile", kLabelX, (int)(80 + ofs), kHeadingFs, DARKBLUE);
 	DrawText("Name:", kLabelX, (int)(135 + ofs), kLabelFs, RAYWHITE);
@@ -177,11 +189,12 @@ void FlappyGame::DrawSettingsScreen(Vector2 virtualMouse){
 	DrawText("Click a key to bind", kLabelX, (int)(705 + ofs), kHintFs, SKYBLUE);
 	// each control row: clicking it arms a rebind (the label reads "press a key" until the next press is captured up top).
 	// buttons sit at x=290 (not 240) so the wide "Photo Mode:" label has room to render without bleeding under the button
+	// flap rows accept a mouse click as well as a key, so their armed prompt says "key or click"
 	DrawText("P1 Flap:", kLabelX, (int)(745 + ofs), kLabelFs, RAYWHITE);
-	if (UiButton(Rectangle{ 290, 737 + ofs, 190, 36 }, interfaceState.settings.rebindTarget == RebindTarget::PLAYER_ONE_FLAP ? "press a key" : KeyName(storage.save.keyFlapP1), virtualMouse))
+	if (UiButton(Rectangle{ 290, 737 + ofs, 190, 36 }, interfaceState.settings.rebindTarget == RebindTarget::PLAYER_ONE_FLAP ? "key or click" : KeyName(storage.save.keyFlapP1), virtualMouse))
 		interfaceState.settings.rebindTarget = RebindTarget::PLAYER_ONE_FLAP;
 	DrawText("P2 Flap:", kLabelX, (int)(790 + ofs), kLabelFs, RAYWHITE);
-	if (UiButton(Rectangle{ 290, 782 + ofs, 190, 36 }, interfaceState.settings.rebindTarget == RebindTarget::PLAYER_TWO_FLAP ? "press a key" : KeyName(storage.save.keyFlapP2), virtualMouse))
+	if (UiButton(Rectangle{ 290, 782 + ofs, 190, 36 }, interfaceState.settings.rebindTarget == RebindTarget::PLAYER_TWO_FLAP ? "key or click" : KeyName(storage.save.keyFlapP2), virtualMouse))
 		interfaceState.settings.rebindTarget = RebindTarget::PLAYER_TWO_FLAP;
 	DrawText("Pause:", kLabelX, (int)(835 + ofs), kLabelFs, RAYWHITE);
 	if (UiButton(Rectangle{ 290, 827 + ofs, 190, 36 }, interfaceState.settings.rebindTarget == RebindTarget::PAUSE ? "press a key" : KeyName(storage.save.keyPause), virtualMouse))

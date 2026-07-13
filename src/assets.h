@@ -50,6 +50,9 @@ Theme MakeClassicTheme();
 Theme BakePackTheme(const char* name, const char* dayPath, const char* nightPath,
 	const char* basePath, bool hasMid = true,
 	const char* dayNearPath = nullptr, const char* nightNearPath = nullptr);
+// attach the theme's ambient sky flyers: aircraft=true → single/fixed-altitude, false → bird flocks. n1/n2 are sprite
+// base names under resources/images/flyers/ (each loads <name>_0.png + _1.png); pass n2 for a second species
+void SetThemeFlyers(Theme& t, bool aircraft, const char* n1, const char* n2 = nullptr);
 // bake the active theme's full bg/bgNight/mid/midNight on demand; idempotent, so it's safe to call every frame.
 // only the active theme stays resident — the Customize picker reads the always-loaded thumbnails instead
 void LoadThemeVisuals(Theme& theme);
@@ -68,7 +71,7 @@ void RebuildTwoPlayerButton(MenuButtonTextures& buttons, const std::vector<BirdS
 // EnsurePipeLoaded bakes one cell on demand (no-op if cached), UnloadPipesExcept frees all but the kept cell,
 // so gameplay never holds all 84 textures resident at once
 void EnsurePipeLoaded(Texture2D (&pipeTex)[Constants::Customization::PipeStyleCount][Constants::Customization::PipeColorCount], Texture2D (&pipeTex180)[Constants::Customization::PipeStyleCount][Constants::Customization::PipeColorCount], int style, int color);
-void UnloadPipesExcept(Texture2D (&pipeTex)[Constants::Customization::PipeStyleCount][Constants::Customization::PipeColorCount], Texture2D (&pipeTex180)[Constants::Customization::PipeStyleCount][Constants::Customization::PipeColorCount], int keepStyle, int keepColor);
+void UnloadPipesExcept(Texture2D (&pipeTex)[Constants::Customization::PipeStyleCount][Constants::Customization::PipeColorCount], Texture2D (&pipeTex180)[Constants::Customization::PipeStyleCount][Constants::Customization::PipeColorCount], int keepStyle, int keepColor, int keepColor2 = -1);
 // digit atlases: scoreBig is the in-run number, scoreSmall is for panels/leaderboards
 void LoadScoreDigits(Texture2D (&scoreBig)[10], Texture2D (&scoreSmall)[10]);
 void LoadMedalTextures(Texture2D (&medalTextures)[Constants::Medals::Count]);
