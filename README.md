@@ -4,6 +4,7 @@
 
 # Flappy Bird++
 
+[![Play on itch.io](https://img.shields.io/badge/itch.io-Play%20Now-fa5c5c?logo=itchdotio&logoColor=white)](https://meta-legend.itch.io/flappy-bird)
 [![Version](https://img.shields.io/github/v/release/meta-legend/Flappy_Bird?label=version&sort=semver)](https://github.com/meta-legend/Flappy_Bird/releases/latest)
 [![Build & Release](https://github.com/meta-legend/Flappy_Bird/actions/workflows/release.yml/badge.svg?branch=master)](https://github.com/meta-legend/Flappy_Bird/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
@@ -16,7 +17,8 @@ chase the top spot.
 
 ## Download
 
-Grab the build for your OS from the
+Play it on **[itch.io](https://meta-legend.itch.io/flappy-bird)**, or grab the
+build for your OS from the
 [**Releases**](https://github.com/meta-legend/Flappy_Bird/releases) page, unzip
 it, and run the game (Supports Windows, Linux,
 macOS).
