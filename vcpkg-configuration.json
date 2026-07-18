@@ -7,7 +7,7 @@
     {
       "kind": "git",
       "repository": "https://github.com/meta-legend/meta-legend-vcpkg-registry",
-      "baseline": "993c7d41480c0d61c5e03108fc14f0fbe695335b",
+      "baseline": "06ceaa12e13a27c0f00fa0d42f6189ef6cc5b4ac",
       "packages": [ "network-ml", "file-ml" ]
     }
   ]
